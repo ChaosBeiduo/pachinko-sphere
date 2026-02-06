@@ -39,8 +39,55 @@
 				align-items: center;
 				gap: 20px;
 				z-index: 10;
-				pointer-events: none; /* Let clicks pass through to canvas if needed, but buttons need pointer-events auto */
+				pointer-events: none;
 			}
+            
+            .control-panel {
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(10px);
+                padding: 20px 40px;
+                border-radius: 20px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 15px;
+                pointer-events: auto;
+            }
+
+            .prize-selector {
+                display: flex;
+                align-items: center;
+                gap: 15px;
+                margin-bottom: 10px;
+            }
+
+            #prize-select {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.3);
+                color: white;
+                padding: 8px 15px;
+                border-radius: 8px;
+                font-size: 1rem;
+                outline: none;
+                cursor: pointer;
+            }
+
+            #prize-select option {
+                background: #222;
+                color: white;
+            }
+
+            .prize-info {
+                font-size: 0.9rem;
+                color: #ccc;
+            }
+
+            #draw-count {
+                color: #ff3366;
+                font-weight: bold;
+                font-size: 1.1rem;
+            }
 			
 			button {
 				pointer-events: auto;
@@ -81,50 +128,55 @@
 				min-height: 2rem;
 			}
 
-            /* Winners List */
-            #winners-list-container {
+            /* Winners Panel */
+            #winners-panel {
                 position: absolute;
-                top: 20px;
+                top: 80px;
                 right: 20px;
-                width: 250px;
-                max-height: 50vh;
+                width: 260px;
+                max-height: calc(100vh - 100px);
                 background: rgba(0, 0, 0, 0.5);
                 backdrop-filter: blur(5px);
                 border-radius: 12px;
                 padding: 15px;
                 border: 1px solid rgba(255, 255, 255, 0.1);
-                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
                 pointer-events: auto;
+                z-index: 5;
             }
             
-            #winners-list-container h3 {
-                margin: 0 0 10px 0;
-                font-size: 1rem;
+            #winners-panel h3 {
+                margin: 0 0 15px 0;
+                font-size: 1.1rem;
+                text-align: center;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                padding-bottom: 10px;
+                color: #fff;
+            }
+            
+            #winners-container {
+                flex: 1;
+                overflow-y: auto;
+                margin-bottom: 15px;
+            }
+            
+            .winner-group {
+                margin-bottom: 15px;
+            }
+            
+            .winner-group h4 {
+                margin: 0 0 5px 0;
+                font-size: 0.9rem;
                 color: #aaa;
                 text-transform: uppercase;
-                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-                padding-bottom: 5px;
             }
             
-            #winners-list {
-                list-style: none;
-                padding: 0;
-                margin: 0;
-            }
-            
-            #winners-list li {
-                padding: 5px 0;
-                font-size: 1.1rem;
+            .winner-group-list {
                 color: #ffd700;
-                display: flex;
-                align-items: center;
-                gap: 10px;
-            }
-            
-            #winners-list li::before {
-                content: '★';
-                font-size: 0.8rem;
-                color: #ff3366;
+                font-size: 0.95rem;
+                line-height: 1.4;
+                word-break: break-all;
             }
 
             /* Result Modal Overlay */
@@ -203,6 +255,184 @@
 				transform: translateY(-2px);
 				box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
 			}
+
+            /* Result Modal Badges */
+            #modal-winners-list {
+                display: flex;
+                flex-wrap: wrap;
+                justify-content: center;
+                gap: 15px;
+                margin: 30px 0;
+            }
+
+            .badge {
+                background: rgba(255, 215, 0, 0.2);
+                border: 1px solid rgba(255, 215, 0, 0.5);
+                color: #ffd700;
+                padding: 10px 20px;
+                border-radius: 50px;
+                font-size: 1.5rem;
+                font-weight: bold;
+                animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+
+            @keyframes popIn {
+                from { transform: scale(0); opacity: 0; }
+                to { transform: scale(1); opacity: 1; }
+            }
+
+            .highlight-name {
+                font-size: 3rem;
+                color: #fff;
+                font-weight: bold;
+                height: 4rem;
+                margin-bottom: 20px;
+                text-shadow: 0 0 20px rgba(255, 51, 102, 0.8);
+            }
+
+            .highlight-name.pop {
+                animation: popScale 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            }
+
+            @keyframes popScale {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.5); }
+                100% { transform: scale(1); }
+            }
+
+            /* Prize Config Modal */
+            #prize-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(5px);
+                z-index: 200;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+
+            #prize-modal-overlay.visible {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            #prize-modal {
+                background: #1a1a1a;
+                width: 500px;
+                max-width: 90%;
+                border-radius: 12px;
+                padding: 30px;
+                border: 1px solid #333;
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            }
+
+            #prize-modal h3 {
+                margin: 0;
+                color: #fff;
+            }
+
+            #prize-list {
+                max-height: 300px;
+                overflow-y: auto;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
+            }
+
+            .prize-config-row {
+                display: flex;
+                gap: 10px;
+                align-items: center;
+            }
+
+            .prize-title-input {
+                flex: 2;
+                background: #222;
+                border: 1px solid #444;
+                color: white;
+                padding: 8px;
+                border-radius: 4px;
+            }
+
+            .prize-count-input {
+                flex: 1;
+                background: #222;
+                border: 1px solid #444;
+                color: white;
+                padding: 8px;
+                border-radius: 4px;
+            }
+
+            .delete-prize-btn {
+                background: transparent;
+                border: none;
+                cursor: pointer;
+                font-size: 1.2rem;
+                padding: 5px;
+                transition: transform 0.2s;
+            }
+
+            .delete-prize-btn:hover {
+                transform: scale(1.1);
+            }
+
+            .dashed-btn {
+                background: transparent;
+                border: 2px dashed #444;
+                color: #888;
+                border-radius: 8px;
+                padding: 10px;
+                cursor: pointer;
+                transition: all 0.2s;
+                text-transform: none;
+                letter-spacing: normal;
+                font-size: 1rem;
+            }
+
+            .dashed-btn:hover {
+                border-color: #666;
+                color: #aaa;
+                background: rgba(255, 255, 255, 0.05);
+                transform: none;
+                box-shadow: none;
+            }
+
+            .primary-btn {
+                background: linear-gradient(45deg, #ff3366, #ff6b6b);
+                color: white;
+                border: none;
+                border-radius: 6px;
+                padding: 10px 20px;
+                font-weight: bold;
+                cursor: pointer;
+                box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
+                font-size: 1rem;
+                text-transform: none;
+                letter-spacing: normal;
+            }
+
+            .primary-btn:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 6px 20px rgba(255, 51, 102, 0.5);
+            }
+            
+            .small {
+                padding: 5px 15px;
+                font-size: 0.8rem;
+                border-radius: 6px;
+                text-transform: none;
+                letter-spacing: normal;
+            }
 
             /* Settings Button */
             #settings-btn {
@@ -326,26 +556,43 @@
 	</head>
 	<body>
 		<div id="sphere-container">
-            <button id="settings-btn">⚙️ 设置名单</button>
+            <div id="top-bar">
+                <button id="settings-btn">⚙️ 设置名单</button>
+                <button id="prizes-btn">🏆 奖项配置</button>
+            </div>
 			<canvas id="lottery-canvas"></canvas>
 			
 			<div id="ui-layer">
-				<div id="status-display">准备就绪</div>
-				<button id="start-btn">开始抽奖</button>
+                <div class="control-panel">
+                    <div class="prize-selector">
+                        <select id="prize-select">
+                            <!-- Prizes will be populated here -->
+                        </select>
+                        <div class="prize-info">
+                            本次抽取 <span id="draw-count">0</span> 人
+                        </div>
+                    </div>
+                    <div id="status-display">准备就绪</div>
+                    <button id="start-btn">开始抽奖</button>
+                </div>
 			</div>
             
-            <div id="winners-list-container">
-                <h3>已中奖名单</h3>
-                <ul id="winners-list">
-                    <!-- Winners will be added here -->
-                </ul>
+            <div id="winners-panel">
+                <h3>中奖结果</h3>
+                <div id="winners-container">
+                    <!-- Results grouped by prize -->
+                </div>
+                <button id="clear-results-btn" class="secondary-btn small">清空结果</button>
             </div>
 			
             <div id="modal-overlay">
                 <div id="result-modal">
-                    <div class="winner-title">🎉 恭喜 🎉</div>
-                    <h2 class="winner-name" id="winner-name">---</h2>
-                    <button class="next-btn" id="next-btn">下一位</button>
+                    <div class="winner-title" id="modal-title">🎉 恭喜 🎉</div>
+                    <div id="modal-winners-list">
+                        <!-- Winners shown here -->
+                    </div>
+                    <div id="current-highlight" class="highlight-name"></div>
+                    <button class="next-btn" id="next-btn">下一轮</button>
                 </div>
             </div>
 
@@ -373,19 +620,48 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Prize Config Modal -->
+            <div id="prize-modal-overlay">
+                <div id="prize-modal">
+                    <h3>奖项配置</h3>
+                    <div id="prize-list">
+                        <!-- Prize items -->
+                    </div>
+                    <button id="add-prize-btn" class="dashed-btn">+ 添加奖项</button>
+                    <div class="modal-actions">
+                        <button id="close-prize-btn" class="primary-btn">完成</button>
+                    </div>
+                </div>
+            </div>
 		</div>
 
 		<script>
 			import { LotterySphere } from '../components/LotterySphere';
 			import names from '../data/name';
+            import { createPrize, validatePrizeList } from '../lib/prizeConfigState';
+            import { drawWinners } from '../lib/drawEngine';
+            import type { Prize } from '../lib/types';
 
 			const canvas = document.getElementById('lottery-canvas') as HTMLCanvasElement;
 			const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
 			const statusDisplay = document.getElementById('status-display') as HTMLDivElement;
 			const modalOverlay = document.getElementById('modal-overlay') as HTMLDivElement;
-			const winnerNameEl = document.getElementById('winner-name') as HTMLHeadingElement;
+            const modalTitle = document.getElementById('modal-title') as HTMLDivElement;
+            const modalWinnersList = document.getElementById('modal-winners-list') as HTMLDivElement;
+            const currentHighlight = document.getElementById('current-highlight') as HTMLDivElement;
 			const nextBtn = document.getElementById('next-btn') as HTMLButtonElement;
-            const winnersList = document.getElementById('winners-list') as HTMLUListElement;
+            const winnersContainer = document.getElementById('winners-container') as HTMLDivElement;
+            const clearResultsBtn = document.getElementById('clear-results-btn') as HTMLButtonElement;
+
+            // Prize UI
+            const prizeSelect = document.getElementById('prize-select') as HTMLSelectElement;
+            const drawCountEl = document.getElementById('draw-count') as HTMLSpanElement;
+            const prizesBtn = document.getElementById('prizes-btn') as HTMLButtonElement;
+            const prizeModalOverlay = document.getElementById('prize-modal-overlay') as HTMLDivElement;
+            const prizeListEl = document.getElementById('prize-list') as HTMLDivElement;
+            const addPrizeBtn = document.getElementById('add-prize-btn') as HTMLButtonElement;
+            const closePrizeBtn = document.getElementById('close-prize-btn') as HTMLButtonElement;
 
             // Settings Elements
             const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
@@ -401,46 +677,258 @@
 			
 			let sphere: LotterySphere | null = null;
 			let isLotteryRunning = false;
-            let currentNamesList = [...names]; // Copy initial names
+            
+            // State
+            let currentNamesList = [...names]; // Candidates pool
+            let prizes: Prize[] = [
+                createPrize('一等奖', 1, '大奖'),
+                createPrize('二等奖', 2),
+                createPrize('三等奖', 5)
+            ];
+            let results: Record<string, string[]> = {};
+            let currentPrizeId = prizes[0].id;
 
 			if (canvas) {
-				// Initialize the sphere
 				sphere = new LotterySphere(canvas, currentNamesList);
 			}
             
-            // Clean up resources when the page is unloaded
             window.addEventListener('beforeunload', () => {
-                if (sphere) {
-                    sphere.destroy();
-                }
+                if (sphere) sphere.destroy();
             });
 
 			function updateStatus(text: string) {
 				if (statusDisplay) statusDisplay.textContent = text;
 			}
             
-            function addWinnerToList(name: string) {
-                if (!winnersList) return;
-                const li = document.createElement('li');
-                li.textContent = name;
-                // Insert at the top
-                winnersList.insertBefore(li, winnersList.firstChild);
+            // --- Prize Logic ---
+            
+            function renderPrizeOptions() {
+                if (!prizeSelect) return;
+                prizeSelect.innerHTML = '';
+                prizes.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.id;
+                    option.textContent = p.title;
+                    prizeSelect.appendChild(option);
+                });
+                prizeSelect.value = currentPrizeId;
+                updateCurrentPrizeInfo();
             }
 
-            // --- Settings Logic ---
+            function updateCurrentPrizeInfo() {
+                const p = prizes.find(x => x.id === currentPrizeId);
+                if (p && drawCountEl) {
+                    drawCountEl.textContent = p.count.toString();
+                }
+            }
+            
+            prizeSelect?.addEventListener('change', (e) => {
+                currentPrizeId = (e.target as HTMLSelectElement).value;
+                updateCurrentPrizeInfo();
+            });
 
+            // Prize Configuration Modal Logic
+            function renderPrizeConfigList() {
+                if (!prizeListEl) return;
+                prizeListEl.innerHTML = '';
+                prizes.forEach((p, index) => {
+                    const row = document.createElement('div');
+                    row.className = 'prize-config-row';
+                    row.innerHTML = `
+                        <input type="text" class="prize-title-input" value="${p.title}" placeholder="奖项名称">
+                        <input type="number" class="prize-count-input" value="${p.count}" min="1" placeholder="人数">
+                        <button class="delete-prize-btn" data-id="${p.id}">🗑️</button>
+                    `;
+                    
+                    const titleInput = row.querySelector('.prize-title-input') as HTMLInputElement;
+                    const countInput = row.querySelector('.prize-count-input') as HTMLInputElement;
+                    const delBtn = row.querySelector('.delete-prize-btn') as HTMLButtonElement;
+                    
+                    titleInput.addEventListener('change', () => {
+                        p.title = titleInput.value;
+                        renderPrizeOptions(); // Live update dropdown
+                    });
+                    
+                    countInput.addEventListener('change', () => {
+                        let val = parseInt(countInput.value);
+                        if (val < 1) val = 1;
+                        p.count = val;
+                        updateCurrentPrizeInfo();
+                    });
+                    
+                    delBtn.addEventListener('click', () => {
+                        if (prizes.length <= 1) {
+                            alert('至少保留一个奖项');
+                            return;
+                        }
+                        prizes = prizes.filter(x => x.id !== p.id);
+                        if (currentPrizeId === p.id) currentPrizeId = prizes[0].id;
+                        renderPrizeConfigList();
+                        renderPrizeOptions();
+                    });
+                    
+                    prizeListEl.appendChild(row);
+                });
+            }
+
+            prizesBtn?.addEventListener('click', () => {
+                prizeModalOverlay.classList.add('visible');
+                renderPrizeConfigList();
+            });
+
+            addPrizeBtn?.addEventListener('click', () => {
+                prizes.push(createPrize(`新奖项 ${prizes.length + 1}`, 1));
+                renderPrizeConfigList();
+                renderPrizeOptions();
+            });
+
+            closePrizeBtn?.addEventListener('click', () => {
+                // Validate
+                const error = validatePrizeList(prizes);
+                if (error) {
+                    alert(error);
+                    return;
+                }
+                prizeModalOverlay.classList.remove('visible');
+            });
+
+            // --- Results Logic ---
+
+            function renderResultsPanel() {
+                if (!winnersContainer) return;
+                winnersContainer.innerHTML = '';
+                
+                prizes.forEach(p => {
+                    const winners = results[p.id] || [];
+                    if (winners.length === 0) return;
+                    
+                    const group = document.createElement('div');
+                    group.className = 'winner-group';
+                    group.innerHTML = `<h4>${p.title}</h4>`;
+                    
+                    const list = document.createElement('div');
+                    list.className = 'winner-group-list';
+                    list.textContent = winners.join('、');
+                    group.appendChild(list);
+                    
+                    winnersContainer.appendChild(group);
+                });
+            }
+            
+            clearResultsBtn?.addEventListener('click', () => {
+                if (confirm('确定要清空所有中奖记录并重置名单吗？')) {
+                    results = {};
+                    renderResultsPanel();
+                    // Restore names
+                    const namesToRestore = processInput(); // Get from textarea
+                    currentNamesList = namesToRestore;
+                    sphere?.setNames(currentNamesList);
+                    updateStatus('已重置');
+                    startBtn.disabled = false;
+                }
+            });
+
+            // --- Main Flow ---
+
+            // Initial render
+            renderPrizeOptions();
+
+            startBtn?.addEventListener('click', () => {
+                if (isLotteryRunning) return;
+                
+                const prize = prizes.find(p => p.id === currentPrizeId);
+                if (!prize) return;
+                
+                if (currentNamesList.length < prize.count) {
+                    alert(`剩余人数不足！当前剩余 ${currentNamesList.length} 人，需要 ${prize.count} 人。`);
+                    return;
+                }
+                
+                isLotteryRunning = true;
+                startBtn.disabled = true;
+                settingsBtn.disabled = true;
+                prizesBtn.disabled = true;
+                prizeSelect.disabled = true;
+                updateStatus(`正在抽取 ${prize.title}...`);
+                
+                // 1. Start spinning
+                sphere?.spin();
+                
+                // 2. Draw winners logic (simulate delay or do it immediately)
+                // Let's do it immediately but wait a bit before stopping
+                const { winners, remainingCandidates } = drawWinners(currentNamesList, prize.count);
+                
+                // Update state
+                currentNamesList = remainingCandidates;
+                if (!results[prize.id]) results[prize.id] = [];
+                results[prize.id].push(...winners);
+                
+                // 3. Stop after 2 seconds
+                setTimeout(() => {
+                    // Update sphere logic to stop and highlight
+                    sphere?.stopAndHighlightWinners(
+                        winners, 
+                        (name) => {
+                            // On highlight one winner
+                            if (currentHighlight) {
+                                currentHighlight.textContent = name;
+                                currentHighlight.classList.remove('pop');
+                                void currentHighlight.offsetWidth; // trigger reflow
+                                currentHighlight.classList.add('pop');
+                            }
+                        },
+                        () => {
+                            // On all finished
+                            isLotteryRunning = false;
+                            updateStatus('抽奖完成');
+                            
+                            // Show modal
+                            modalOverlay.classList.add('visible');
+                            if (modalTitle) modalTitle.textContent = `${prize.title} 结果`;
+                            if (modalWinnersList) {
+                                modalWinnersList.innerHTML = winners.map(w => `<span class="badge">${w}</span>`).join('');
+                            }
+                            if (currentHighlight) currentHighlight.textContent = ''; // Clear highlight text
+                            
+                            // Render sidebar results
+                            renderResultsPanel();
+                            
+                            // Remove winners from sphere visuals
+                            winners.forEach(w => sphere?.removeWinner(w));
+                        }
+                    );
+                }, 2000);
+            });
+
+            nextBtn?.addEventListener('click', () => {
+                modalOverlay.classList.remove('visible');
+                updateStatus('准备就绪');
+                
+                if (currentNamesList.length === 0) {
+                    startBtn.disabled = true;
+                    updateStatus('所有名单已抽完');
+                } else {
+                    startBtn.disabled = false;
+                }
+                
+                settingsBtn.disabled = false;
+                prizesBtn.disabled = false;
+                prizeSelect.disabled = false;
+            });
+
+            // --- Existing Settings Logic (Process Input) ---
+            // (Kept mostly same, just added return type to processInput used above)
+            
             function processInput() {
                 if (!namesInput) return [];
                 const rawText = namesInput.value;
                 const lines = rawText.split('\n');
-                const rawCount = lines.length;
                 
                 const validNames: string[] = [];
                 const duplicates: string[] = [];
                 const seen = new Set<string>();
                 
                 lines.forEach(line => {
-                    // Clean: trim, merge spaces
                     const clean = line.trim().replace(/\s+/g, ' ');
                     if (!clean) return;
                     
@@ -452,14 +940,13 @@
                     }
                 });
                 
-                // Update UI
-                if (rawCountEl) rawCountEl.textContent = rawCount.toString();
+                // Update UI (Counts)
+                if (rawCountEl) rawCountEl.textContent = lines.length.toString();
                 if (validCountEl) validCountEl.textContent = validNames.length.toString();
                 
                 // Duplicates
                 if (duplicates.length > 0) {
                     dupWarningEl?.classList.remove('hidden');
-                    // Top 10
                     const top10 = duplicates.slice(0, 10);
                     let msg = top10.join(', ');
                     if (duplicates.length > 10) msg += ' 等';
@@ -480,88 +967,39 @@
                 return validNames;
             }
 
-            if (settingsBtn) {
-                settingsBtn.addEventListener('click', () => {
-                    if (settingsOverlay) settingsOverlay.classList.add('visible');
-                    // Pre-fill with current names
-                    if (namesInput) {
-                        namesInput.value = currentNamesList.join('\n');
-                        processInput();
-                    }
-                });
-            }
+            // Settings Event Listeners
+            settingsBtn?.addEventListener('click', () => {
+                settingsOverlay.classList.add('visible');
+                // If we have current names, we might want to sync back to textarea if it was empty?
+                // But usually we trust the textarea content as the source of truth for "Reset".
+                // If textarea is empty, maybe fill it?
+                if (namesInput && !namesInput.value && currentNamesList.length > 0) {
+                    namesInput.value = currentNamesList.join('\n');
+                }
+                processInput();
+            });
 
-            if (cancelSettingsBtn) {
-                cancelSettingsBtn.addEventListener('click', () => {
-                    if (settingsOverlay) settingsOverlay.classList.remove('visible');
-                });
-            }
+            cancelSettingsBtn?.addEventListener('click', () => {
+                settingsOverlay.classList.remove('visible');
+            });
 
-            if (namesInput) {
-                namesInput.addEventListener('input', processInput);
-            }
+            namesInput?.addEventListener('input', processInput);
 
-            if (applySettingsBtn) {
-                applySettingsBtn.addEventListener('click', () => {
-                    const newNames = processInput();
-                    if (newNames.length === 0) return;
-                    
+            applySettingsBtn?.addEventListener('click', () => {
+                const newNames = processInput();
+                if (newNames.length === 0) return;
+                
+                if (confirm('应用新名单将清空当前中奖记录，确定吗？')) {
                     currentNamesList = newNames;
+                    results = {};
+                    renderResultsPanel();
+                    sphere?.setNames(newNames);
                     
-                    if (sphere) {
-                        sphere.setNames(newNames);
-                    }
-                    
-                    // Reset winners list
-                    if (winnersList) winnersList.innerHTML = '';
-                    
-                    // Enable start button
-                    if (startBtn) startBtn.disabled = false;
-                    updateStatus('准备就绪');
-                    
-                    if (settingsOverlay) settingsOverlay.classList.remove('visible');
-                });
-            }
-
-            // --- End Settings Logic ---
-
-			if (startBtn && sphere) {
-				startBtn.addEventListener('click', () => {
-					if (isLotteryRunning) return;
-					
-					isLotteryRunning = true;
-					startBtn.disabled = true;
-					updateStatus('抽奖中...');
-					
-					sphere?.startLottery((winner) => {
-						isLotteryRunning = false;
-						// Don't enable start btn yet, wait for "Next"
-						updateStatus('抽奖结束');
-						
-						// Show result
-						if (winnerNameEl) winnerNameEl.textContent = winner;
-						modalOverlay.classList.add('visible');
-                        
-                        // Add to list immediately or after close? 
-                        // Let's add immediately so it's there when they look back
-                        addWinnerToList(winner);
-					});
-				});
-			}
-			
-			if (nextBtn) {
-				nextBtn.addEventListener('click', () => {
-					modalOverlay.classList.remove('visible');
-					updateStatus('准备就绪');
                     startBtn.disabled = false;
-                    
-                    // Remove winner from sphere
-                    const winnerName = winnerNameEl.textContent;
-                    if (winnerName && sphere) {
-                        sphere.removeWinner(winnerName);
-                    }
-				});
-			}
+                    updateStatus('准备就绪');
+                    settingsOverlay.classList.remove('visible');
+                }
+            });
 		</script>
 	</body>
 </html>

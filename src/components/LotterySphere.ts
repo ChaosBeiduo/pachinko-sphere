@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 
-type AnimationState = 'idle' | 'accelerating' | 'constant' | 'decelerating';
+type AnimationState = 'idle' | 'accelerating' | 'constant' | 'decelerating' | 'highlighting';
 
 export class LotterySphere {
   private scene: THREE.Scene;
@@ -13,14 +13,19 @@ export class LotterySphere {
   // Lottery State
   private state: AnimationState = 'idle';
   private stateStartTime: number = 0;
-  private onWinner: ((name: string) => void) | null = null;
+  
+  // Multi-winner handling
+  private winnersQueue: string[] = [];
+  private currentWinnerIndex: number = 0;
+  private onWinnerHighlight: ((name: string) => void) | null = null;
+  private onAllFinished: (() => void) | null = null;
   
   // Animation Parameters
   private baseSpeed = { x: 0.001, y: 0.002 };
   private maxSpeed = { x: 0.05, y: 0.1 };
   private currentSpeed = { x: 0.001, y: 0.002 };
   
-  // Deceleration control
+  // Deceleration & Alignment control
   private startQuaternion = new THREE.Quaternion();
   private endQuaternion = new THREE.Quaternion();
   private extraRotationAxis = new THREE.Vector3(0, 1, 0);
@@ -156,16 +161,38 @@ export class LotterySphere {
     this.renderer.setSize(width, height);
   }
 
-  public startLottery(onWinner: (name: string) => void) {
-    if (this.state !== 'idle') return;
-    if (this.names.length === 0) {
-        console.warn("Cannot start lottery: No names left.");
-        return;
-    }
-    
-    this.onWinner = onWinner;
+  // New API: Start spinning
+  public spin() {
+    if (this.names.length === 0) return;
     this.state = 'accelerating';
     this.stateStartTime = performance.now();
+  }
+
+  // New API: Stop and highlight list of winners
+  public stopAndHighlightWinners(
+    winners: string[], 
+    onWinnerHighlight: (name: string) => void,
+    onAllFinished: () => void
+  ) {
+    if (this.names.length === 0) {
+        onAllFinished();
+        return;
+    }
+
+    this.winnersQueue = winners;
+    this.currentWinnerIndex = 0;
+    this.onWinnerHighlight = onWinnerHighlight;
+    this.onAllFinished = onAllFinished;
+
+    // Start deceleration process towards the first winner
+    if (this.winnersQueue.length > 0) {
+        this.prepareDeceleration(this.winnersQueue[0]);
+        this.state = 'decelerating';
+        this.stateStartTime = performance.now();
+    } else {
+        this.state = 'idle';
+        onAllFinished();
+    }
   }
 
   private easeInQuad(t: number): number {
@@ -184,7 +211,6 @@ export class LotterySphere {
     this.animationId = requestAnimationFrame(() => this.animate());
     
     const now = performance.now();
-    // const dt = 16; // approximate delta time in ms for rotation integration
     
     if (this.state === 'idle') {
       this.group.rotation.y += this.baseSpeed.y;
@@ -205,17 +231,9 @@ export class LotterySphere {
         this.stateStartTime = now;
       }
     } else if (this.state === 'constant') {
-      const duration = 2000;
-      const progress = Math.min((now - this.stateStartTime) / duration, 1);
-      
+      // Just spin at max speed
       this.group.rotation.y += this.maxSpeed.y;
       this.group.rotation.x += this.maxSpeed.x;
-      
-      if (progress >= 1) {
-        this.prepareDeceleration();
-        this.state = 'decelerating';
-        this.stateStartTime = now;
-      }
     } else if (this.state === 'decelerating') {
       const duration = 1500;
       const progress = Math.min((now - this.stateStartTime) / duration, 1);
@@ -223,28 +241,10 @@ export class LotterySphere {
       // Use cubic ease out for smooth landing
       const t = this.easeOutCubic(progress);
       
-      // 1. Slerp towards the target orientation
-      // This handles the "align to camera" part
       const currentBaseQuat = this.startQuaternion.clone().slerp(this.endQuaternion, t);
       
-      // 2. Add extra rotation that decays to zero
-      // This handles the "continue spinning then stop" illusion
-      // We want to spin around a consistent axis (e.g. Y)
-      // Total extra rotation: K * 2PI.
-      // We want the rotational velocity to match at t=0 and be 0 at t=1.
-      // But simpler: just decay the rotation angle from Max to 0? 
-      // No, we need total angle. Let's say we add `extraRotationRevs` full rotations.
-      // Angle = TotalAngle * (1 - t)^3? No, that starts at max angle and goes to 0.
-      // We want to ADD rotation. 
-      // Let's model the extra rotation angle remaining: Theta(t) = Total * (1-t)^3
-      // So Current Extra Rotation = Total - Theta(t) = Total * (1 - (1-t)^3)
-      // Wait, simpler: We want to apply an additional rotation on top of the slerp.
-      // At t=0, rotation is 0. At t=1, rotation is N * 360.
-      // But if we just rotate N*360, the final state is Identity, so it doesn't affect alignment.
-      // So we compute:
+      // Add extra rotation that decays to zero
       const totalExtraAngle = this.extraRotationRevs * Math.PI * 2;
-      // We want the speed to start high and end at 0.
-      // EaseOutCubic function for angle: Angle(t) = Total * (1 - (1-t)^3)
       const currentExtraAngle = totalExtraAngle * (1 - Math.pow(1 - progress, 3));
       
       const extraQuat = new THREE.Quaternion().setFromAxisAngle(
@@ -252,86 +252,97 @@ export class LotterySphere {
         currentExtraAngle
       );
       
-      // Combine: First apply base slerp, then apply extra rotation? 
-      // Or Extra * Base?
-      // Since we want the final state (t=1) to be exactly endQuaternion,
-      // and at t=1 extraQuat is Identity (because angle is multiple of 2PI),
-      // order matters for the path but not the destination.
-      // Let's apply extra rotation in local space or world space?
-      // Let's try multiplying in world space.
       this.group.quaternion.copy(extraQuat).multiply(currentBaseQuat);
       
       if (progress >= 1) {
-        this.state = 'idle';
-        // Ensure exact final position
+        // Finished stopping at the current winner
         this.group.quaternion.copy(this.endQuaternion);
         
-        // Find winner name
-        // We know who it is from prepareDeceleration, but we should verify or just callback
-        // The winner is stored in this.targetIndex or similar?
-        // Let's callback
-        if (this.onWinner) {
-          // We need to pass the winner name. 
-          // We selected it in prepareDeceleration.
-          // Let's store it.
-          this.onWinner(this.winnerName);
-          this.onWinner = null;
+        // Notify UI about current winner
+        const currentWinnerName = this.winnersQueue[this.currentWinnerIndex];
+        if (this.onWinnerHighlight) {
+            this.onWinnerHighlight(currentWinnerName);
         }
+
+        // Move to next state: highlighting/pause
+        this.state = 'highlighting';
+        this.stateStartTime = now;
       }
+    } else if (this.state === 'highlighting') {
+        const pauseDuration = 800; // 0.8s pause
+        if (now - this.stateStartTime > pauseDuration) {
+            // Move to next winner or finish
+            this.currentWinnerIndex++;
+            if (this.currentWinnerIndex < this.winnersQueue.length) {
+                // Transition to next winner
+                // We don't need full spin, just move to next
+                // But to make it look nice, maybe a quick slerp?
+                // Let's reuse 'decelerating' but with shorter duration and no extra spin?
+                // Or simply:
+                this.prepareTransitionToNext(this.winnersQueue[this.currentWinnerIndex]);
+            } else {
+                // All done
+                this.state = 'idle';
+                if (this.onAllFinished) this.onAllFinished();
+            }
+        }
     }
     
     this.renderer.render(this.scene, this.camera);
   }
 
-  private winnerName: string = '';
-
-  private prepareDeceleration() {
-    // 1. Pick a random winner
-    const randomIndexArray = new Uint32Array(1);
-    crypto.getRandomValues(randomIndexArray);
-    const winnerIndex = randomIndexArray[0] % this.names.length;
-    this.winnerName = this.names[winnerIndex];
-    
-    // 2. Find the sprite object
-    // Since we added them in order, group.children[winnerIndex] should be it.
-    // But let's verify with userData to be safe if we add other things later.
+  private prepareDeceleration(targetName: string) {
+    // Similar to previous prepareDeceleration, but targeting a specific name
     const winnerSprite = this.group.children.find(
-      child => child.userData.name === this.winnerName
+      child => child.userData.name === targetName
     ) as THREE.Sprite;
     
     if (!winnerSprite) {
-      console.error('Winner sprite not found');
-      // Fallback to current rotation
+      console.warn('Target sprite not found:', targetName);
+      // Keep current rotation as target to avoid jump
       this.startQuaternion.copy(this.group.quaternion);
       this.endQuaternion.copy(this.group.quaternion);
       return;
     }
 
-    // 3. Calculate Target Rotation
-    // We want the sprite to be at (0, 0, R) in World Space.
-    // Currently, Sprite is at P_local in Group Space.
-    // We need Group Rotation Q_end such that:
-    // Q_end * P_local = (0, 0, R)
-    //
-    // Let V_local = P_local.normalize()
-    // Let V_target = (0, 0, 1)
-    // We need rotation that takes V_local to V_target.
     const localDir = winnerSprite.position.clone().normalize();
     const targetDir = new THREE.Vector3(0, 0, 1);
     
-    // This gives the rotation needed to turn localDir to targetDir
     this.endQuaternion.setFromUnitVectors(localDir, targetDir);
-    
-    // 4. Record Start Rotation
     this.startQuaternion.copy(this.group.quaternion);
-    
-    // 5. Determine Extra Rotation Axis
-    // Ideally, we rotate around the axis that we were spinning around mostly?
-    // Or just Y axis for simplicity.
     this.extraRotationAxis.set(0, 1, 0); 
-    
-    // Refine: To make it smoother, maybe use the axis of the Slerp?
-    // No, Y axis is fine for a "spinning top" feel.
+    // Reset revs for full deceleration
+    this.extraRotationRevs = 2;
+  }
+
+  private prepareTransitionToNext(targetName: string) {
+      // Shorter transition to next winner
+      const winnerSprite = this.group.children.find(
+        child => child.userData.name === targetName
+      ) as THREE.Sprite;
+
+      if (!winnerSprite) {
+          // Skip if not found
+          this.state = 'highlighting'; // skip wait
+          this.stateStartTime = 0; // force next immediately
+          return;
+      }
+
+      const localDir = winnerSprite.position.clone().normalize();
+      const targetDir = new THREE.Vector3(0, 0, 1);
+      
+      this.endQuaternion.setFromUnitVectors(localDir, targetDir);
+      this.startQuaternion.copy(this.group.quaternion);
+      
+      // No extra spin for transitioning between winners
+      this.extraRotationRevs = 0;
+      
+      this.state = 'decelerating';
+      // Hack: we reuse 'decelerating' state logic, but duration is hardcoded to 1500 there.
+      // We might want shorter duration for switching between winners?
+      // For simplicity, let's keep 1500s or maybe we should variable-ize duration.
+      // Let's just keep it consistent for now.
+      this.stateStartTime = performance.now();
   }
 
   public removeWinner(name: string) {
@@ -341,30 +352,9 @@ export class LotterySphere {
 
     if (spriteIndex !== -1) {
       const sprite = this.group.children[spriteIndex] as THREE.Sprite;
-      
-      // Animate removal or just remove
-      // For now, just remove immediately
-      // Don't dispose texture here if we are caching it, 
-      // UNLESS we are sure it won't be used again. 
-      // Since this specific texture instance might be shared (if we had duplicate names), 
-      // we should be careful. 
-      // But in our current logic, we cache by name. 
-      // If we remove the winner, that name is gone from the list.
-      // So we can check if any other sprite uses this name? 
-      // Assuming unique names for now or that we don't care about cleaning up the cache until destroy().
-      
-      // We only dispose the material here.
       sprite.material.dispose();
       this.group.remove(sprite);
-      
-      // Update names array so they can't be picked again
       this.names = this.names.filter(n => n !== name);
-      
-      // Re-layout sphere? 
-      // If we remove one, a gap appears. 
-      // Option A: Leave the gap (simpler, shows progress)
-      // Option B: Re-distribute remaining (jumpy)
-      // Let's stick with Option A for now as it feels more physical like taking a ball out.
     }
   }
 
