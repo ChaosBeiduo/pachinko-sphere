@@ -15,22 +15,141 @@
 				overflow: hidden;
 				background-color: #111; /* Dark background to make names pop */
 				font-family: system-ui, sans-serif;
+				color: white;
 			}
 			#sphere-container {
 				width: 100vw;
 				height: 100vh;
-				display: flex;
-				justify-content: center;
-				align-items: center;
+				position: relative;
 			}
 			canvas {
 				display: block;
+				width: 100%;
+				height: 100%;
+			}
+			
+			/* UI Overlay */
+			#ui-layer {
+				position: absolute;
+				bottom: 40px;
+				left: 50%;
+				transform: translateX(-50%);
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				gap: 20px;
+				z-index: 10;
+				pointer-events: none; /* Let clicks pass through to canvas if needed, but buttons need pointer-events auto */
+			}
+			
+			button {
+				pointer-events: auto;
+				padding: 12px 32px;
+				font-size: 1.2rem;
+				font-weight: bold;
+				color: #fff;
+				background: linear-gradient(45deg, #ff3366, #ff6b6b);
+				border: none;
+				border-radius: 50px;
+				cursor: pointer;
+				box-shadow: 0 4px 15px rgba(255, 51, 102, 0.4);
+				transition: transform 0.2s, box-shadow 0.2s;
+				text-transform: uppercase;
+				letter-spacing: 1px;
+			}
+			
+			button:hover {
+				transform: translateY(-2px);
+				box-shadow: 0 6px 20px rgba(255, 51, 102, 0.6);
+			}
+			
+			button:active {
+				transform: translateY(1px);
+			}
+			
+			button:disabled {
+				background: #555;
+				cursor: not-allowed;
+				box-shadow: none;
+				transform: none;
+			}
+
+			#status-display {
+				font-size: 1.5rem;
+				font-weight: bold;
+				text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+				min-height: 2rem;
+			}
+
+			#result-modal {
+				position: absolute;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				background: rgba(0, 0, 0, 0.85);
+				padding: 40px;
+				border-radius: 20px;
+				border: 2px solid rgba(255, 255, 255, 0.2);
+				text-align: center;
+				backdrop-filter: blur(10px);
+				display: none;
+				opacity: 0;
+				transition: opacity 0.3s;
+				z-index: 20;
+				pointer-events: auto;
+			}
+			
+			#result-modal.visible {
+				display: block;
+				opacity: 1;
+			}
+			
+			.winner-title {
+				font-size: 1.2rem;
+				color: #aaa;
+				margin-bottom: 10px;
+				text-transform: uppercase;
+			}
+			
+			.winner-name {
+				font-size: 3rem;
+				font-weight: 800;
+				background: linear-gradient(45deg, #ffd700, #ffaa00);
+				-webkit-background-clip: text;
+				-webkit-text-fill-color: transparent;
+				margin: 0;
+			}
+
+			.close-btn {
+				margin-top: 20px;
+				background: transparent;
+				border: 1px solid rgba(255, 255, 255, 0.3);
+				padding: 8px 20px;
+				font-size: 0.9rem;
+				box-shadow: none;
+			}
+			
+			.close-btn:hover {
+				background: rgba(255, 255, 255, 0.1);
+				transform: none;
+				box-shadow: none;
 			}
 		</style>
 	</head>
 	<body>
 		<div id="sphere-container">
 			<canvas id="lottery-canvas"></canvas>
+			
+			<div id="ui-layer">
+				<div id="status-display">准备就绪</div>
+				<button id="start-btn">开始抽奖</button>
+			</div>
+			
+			<div id="result-modal">
+				<div class="winner-title">中奖者</div>
+				<h2 class="winner-name" id="winner-name">---</h2>
+				<button class="close-btn" id="close-btn">关闭</button>
+			</div>
 		</div>
 
 		<script>
@@ -38,12 +157,54 @@
 			import names from '../data/name';
 
 			const canvas = document.getElementById('lottery-canvas') as HTMLCanvasElement;
+			const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
+			const statusDisplay = document.getElementById('status-display') as HTMLDivElement;
+			const resultModal = document.getElementById('result-modal') as HTMLDivElement;
+			const winnerNameEl = document.getElementById('winner-name') as HTMLHeadingElement;
+			const closeBtn = document.getElementById('close-btn') as HTMLButtonElement;
+			
+			let sphere: LotterySphere | null = null;
+			let isLotteryRunning = false;
+
 			if (canvas) {
 				// Initialize the sphere
-				const sphere = new LotterySphere(canvas, names);
-				
-				// Optional: cleanup on page unload (though not strictly necessary for single page)
-				// window.addEventListener('unload', () => sphere.destroy());
+				sphere = new LotterySphere(canvas, names);
+			}
+
+			function updateStatus(text: string) {
+				if (statusDisplay) statusDisplay.textContent = text;
+			}
+
+			if (startBtn && sphere) {
+				startBtn.addEventListener('click', () => {
+					if (isLotteryRunning) return;
+					
+					isLotteryRunning = true;
+					startBtn.disabled = true;
+					updateStatus('抽奖中...');
+					
+					// Hide previous result if any
+					resultModal.classList.remove('visible');
+					
+					sphere?.startLottery((winner) => {
+						isLotteryRunning = false;
+						startBtn.disabled = false;
+						updateStatus('抽奖结束');
+						
+						// Show result
+						if (winnerNameEl) winnerNameEl.textContent = winner;
+						resultModal.classList.add('visible');
+						
+						// Fire confetti? (Maybe later)
+					});
+				});
+			}
+			
+			if (closeBtn) {
+				closeBtn.addEventListener('click', () => {
+					resultModal.classList.remove('visible');
+					updateStatus('准备就绪');
+				});
 			}
 		</script>
 	</body>
