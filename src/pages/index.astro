@@ -1,5 +1,4 @@
 ---
-
 ---
 
 <html lang="en">
@@ -9,9 +8,43 @@
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Astro</title>
+		<title>Lottery Sphere</title>
+		<style>
+			body {
+				margin: 0;
+				overflow: hidden;
+				background-color: #111; /* Dark background to make names pop */
+				font-family: system-ui, sans-serif;
+			}
+			#sphere-container {
+				width: 100vw;
+				height: 100vh;
+				display: flex;
+				justify-content: center;
+				align-items: center;
+			}
+			canvas {
+				display: block;
+			}
+		</style>
 	</head>
 	<body>
-		<h1>Astro</h1>
+		<div id="sphere-container">
+			<canvas id="lottery-canvas"></canvas>
+		</div>
+
+		<script>
+			import { LotterySphere } from '../components/LotterySphere';
+			import names from '../data/name';
+
+			const canvas = document.getElementById('lottery-canvas') as HTMLCanvasElement;
+			if (canvas) {
+				// Initialize the sphere
+				const sphere = new LotterySphere(canvas, names);
+				
+				// Optional: cleanup on page unload (though not strictly necessary for single page)
+				// window.addEventListener('unload', () => sphere.destroy());
+			}
+		</script>
 	</body>
 </html>
