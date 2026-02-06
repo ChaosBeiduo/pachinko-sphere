@@ -26,6 +26,9 @@ export class LotterySphere {
   private extraRotationAxis = new THREE.Vector3(0, 1, 0);
   private extraRotationRevs = 2; // Extra revolutions during deceleration
 
+  // Texture Cache
+  private textureCache: Map<string, THREE.Texture> = new Map();
+
   constructor(
     private canvas: HTMLCanvasElement, 
     private names: string[],
@@ -56,6 +59,14 @@ export class LotterySphere {
   }
 
   private init() {
+    if (this.names.length === 0) {
+      console.warn('LotterySphere: No names provided.');
+      // Optional: Add a placeholder sprite saying "No Data"
+      const sprite = this.createSprite('No Data');
+      this.group.add(sprite);
+      return;
+    }
+
     // Generate sprites on Fibonacci sphere
     const count = this.names.length;
     const goldenRatio = (1 + Math.sqrt(5)) / 2;
@@ -77,36 +88,42 @@ export class LotterySphere {
   }
 
   private createSprite(name: string): THREE.Sprite {
-    const fontSize = 48;
-    const fontFace = 'Arial, sans-serif';
-    const padding = 10;
-    
-    // Estimate text width
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-    if (!tempCtx) throw new Error('Cannot get 2d context');
-    tempCtx.font = `bold ${fontSize}px ${fontFace}`;
-    const textMetrics = tempCtx.measureText(name);
-    const textWidth = textMetrics.width;
-    
-    // Create canvas for texture
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('Cannot get 2d context');
-    
-    canvas.width = textWidth + padding * 2;
-    canvas.height = fontSize + padding * 2;
-    
-    // Draw text
-    ctx.font = `bold ${fontSize}px ${fontFace}`;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
-    ctx.shadowBlur = 4;
-    ctx.fillText(name, canvas.width / 2, canvas.height / 2);
-    
-    const texture = new THREE.CanvasTexture(canvas);
+    let texture = this.textureCache.get(name);
+
+    if (!texture) {
+        const fontSize = 48;
+        const fontFace = 'Arial, sans-serif';
+        const padding = 10;
+        
+        // Estimate text width
+        const tempCanvas = document.createElement('canvas');
+        const tempCtx = tempCanvas.getContext('2d');
+        if (!tempCtx) throw new Error('Cannot get 2d context');
+        tempCtx.font = `bold ${fontSize}px ${fontFace}`;
+        const textMetrics = tempCtx.measureText(name);
+        const textWidth = textMetrics.width;
+        
+        // Create canvas for texture
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Cannot get 2d context');
+        
+        canvas.width = textWidth + padding * 2;
+        canvas.height = fontSize + padding * 2;
+        
+        // Draw text
+        ctx.font = `bold ${fontSize}px ${fontFace}`;
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0, 0, 0, 0.5)';
+        ctx.shadowBlur = 4;
+        ctx.fillText(name, canvas.width / 2, canvas.height / 2);
+        
+        texture = new THREE.CanvasTexture(canvas);
+        // Cache the texture
+        this.textureCache.set(name, texture);
+    }
     
     const material = new THREE.SpriteMaterial({ 
       map: texture,
@@ -115,8 +132,10 @@ export class LotterySphere {
     
     const sprite = new THREE.Sprite(material);
     // Scale sprite to match aspect ratio of text
+    // We need to access image dimensions from texture
+    const image = texture.image;
     const scale = 0.5; // global scale factor
-    sprite.scale.set(canvas.width * scale, canvas.height * scale, 1);
+    sprite.scale.set(image.width * scale, image.height * scale, 1);
     
     return sprite;
   }
@@ -139,6 +158,10 @@ export class LotterySphere {
 
   public startLottery(onWinner: (name: string) => void) {
     if (this.state !== 'idle') return;
+    if (this.names.length === 0) {
+        console.warn("Cannot start lottery: No names left.");
+        return;
+    }
     
     this.onWinner = onWinner;
     this.state = 'accelerating';
@@ -161,7 +184,7 @@ export class LotterySphere {
     this.animationId = requestAnimationFrame(() => this.animate());
     
     const now = performance.now();
-    const dt = 16; // approximate delta time in ms for rotation integration
+    // const dt = 16; // approximate delta time in ms for rotation integration
     
     if (this.state === 'idle') {
       this.group.rotation.y += this.baseSpeed.y;
@@ -273,7 +296,7 @@ export class LotterySphere {
     // Since we added them in order, group.children[winnerIndex] should be it.
     // But let's verify with userData to be safe if we add other things later.
     const winnerSprite = this.group.children.find(
-      child => child.userData.index === winnerIndex
+      child => child.userData.name === this.winnerName
     ) as THREE.Sprite;
     
     if (!winnerSprite) {
@@ -321,7 +344,16 @@ export class LotterySphere {
       
       // Animate removal or just remove
       // For now, just remove immediately
-      sprite.material.map?.dispose();
+      // Don't dispose texture here if we are caching it, 
+      // UNLESS we are sure it won't be used again. 
+      // Since this specific texture instance might be shared (if we had duplicate names), 
+      // we should be careful. 
+      // But in our current logic, we cache by name. 
+      // If we remove the winner, that name is gone from the list.
+      // So we can check if any other sprite uses this name? 
+      // Assuming unique names for now or that we don't care about cleaning up the cache until destroy().
+      
+      // We only dispose the material here.
       sprite.material.dispose();
       this.group.remove(sprite);
       
@@ -343,12 +375,17 @@ export class LotterySphere {
     this.cleanupResize();
     this.renderer.dispose();
     
-    // Dispose textures and materials
+    // Dispose materials
     this.group.traverse((object: THREE.Object3D) => {
       if (object instanceof THREE.Sprite) {
-        object.material.map?.dispose();
         object.material.dispose();
       }
     });
+
+    // Dispose all cached textures
+    this.textureCache.forEach(texture => {
+        texture.dispose();
+    });
+    this.textureCache.clear();
   }
 }

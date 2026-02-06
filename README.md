@@ -1,43 +1,89 @@
-# Astro Starter Kit: Minimal
+# Lottery Sphere
 
-```sh
-npm create astro@latest -- --template minimal
+A 3D lottery drawing application built with Astro and Three.js. Features a beautiful "sphere of names" that spins and selects winners with smooth animations.
+
+## Features
+
+- **3D Visualization**: Names are distributed on a sphere using the Fibonacci Sphere algorithm.
+- **Performance Optimized**: Uses CanvasTexture and Sprites instead of heavy 3D text geometry.
+- **Fair Selection**: Uses `crypto.getRandomValues` for cryptographically strong random selection.
+- **Responsive**: Adapts to window resizing and handles high DPR screens (max 2x).
+- **Interactive UI**: 
+  - Smooth animation states (Accelerate -> Constant -> Decelerate).
+  - "Winner" alignment to camera.
+  - Modal announcement with visual effects.
+  - Sidebar history of winners.
+
+## Getting Started
+
+### Prerequisites
+
+- Node.js (v16 or higher)
+- npm or pnpm
+
+### Installation
+
+1. Clone the repository
+2. Install dependencies:
+
+```bash
+npm install
+# or
+pnpm install
 ```
 
-> 🧑‍🚀 **Seasoned astronaut?** Delete this file. Have fun!
+3. Start the development server:
 
-## 🚀 Project Structure
-
-Inside of your Astro project, you'll see the following folders and files:
-
-```text
-/
-├── public/
-├── src/
-│   └── pages/
-│       └── index.astro
-└── package.json
+```bash
+npm run dev
 ```
 
-Astro looks for `.astro` or `.md` files in the `src/pages/` directory. Each page is exposed as a route based on its file name.
+Visit `http://localhost:4321` in your browser.
 
-There's nothing special about `src/components/`, but that's where we like to put any Astro/React/Vue/Svelte/Preact components.
+## Customization
 
-Any static assets, like images, can be placed in the `public/` directory.
+### Modifying the Name List
 
-## 🧞 Commands
+Edit `src/data/name.ts` to update the list of participants. The file should export an array of strings:
 
-All commands are run from the root of the project, from a terminal:
+```typescript
+// src/data/name.ts
+export default [
+  "Alice",
+  "Bob",
+  "Charlie",
+  // Add more names here...
+];
+```
 
-| Command                   | Action                                           |
-| :------------------------ | :----------------------------------------------- |
-| `npm install`             | Installs dependencies                            |
-| `npm run dev`             | Starts local dev server at `localhost:4321`      |
-| `npm run build`           | Build your production site to `./dist/`          |
-| `npm run preview`         | Preview your build locally, before deploying     |
-| `npm run astro ...`       | Run CLI commands like `astro add`, `astro check` |
-| `npm run astro -- --help` | Get help using the Astro CLI                     |
+### Changing Award Text
 
-## 👀 Want to learn more?
+To change the text shown in the winner modal (e.g., "Congratulations"), edit `src/pages/index.astro`. Look for the `#result-modal` section:
 
-Feel free to check [our documentation](https://docs.astro.build) or jump into our [Discord server](https://astro.build/chat).
+```html
+<div id="result-modal">
+    <div class="winner-title">🎉 恭喜 🎉</div> <!-- Change this text -->
+    <h2 class="winner-name" id="winner-name">---</h2>
+    <button class="next-btn" id="next-btn">下一位</button>
+</div>
+```
+
+### Adjusting Animation Speed
+
+You can tweak the animation speeds in `src/components/LotterySphere.ts`:
+
+```typescript
+// src/components/LotterySphere.ts
+private baseSpeed = { x: 0.001, y: 0.002 }; // Idle rotation speed
+private maxSpeed = { x: 0.05, y: 0.1 };     // Spinning speed
+```
+
+## Performance Notes
+
+- **Texture Caching**: The application automatically caches generated textures for identical names to save memory.
+- **Resource Cleanup**: All Three.js resources (geometries, materials, textures) are properly disposed of when the component is destroyed.
+- **Sprite Limit**: For optimal performance on average devices, it is recommended to keep the list under 2000 names.
+
+## License
+
+MIT
