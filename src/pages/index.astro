@@ -434,11 +434,15 @@
                 letter-spacing: normal;
             }
 
-            /* Settings Button */
-            #settings-btn {
+            /* Settings Button (Top Right) */
+            #top-bar {
                 position: absolute;
                 top: 20px;
-                left: 20px;
+                right: 20px;
+                z-index: 20;
+            }
+
+            #system-config-btn {
                 background: rgba(255, 255, 255, 0.1);
                 backdrop-filter: blur(5px);
                 border: 1px solid rgba(255, 255, 255, 0.2);
@@ -447,22 +451,25 @@
                 color: white;
                 font-size: 0.9rem;
                 cursor: pointer;
-                z-index: 20;
                 transition: all 0.2s;
+                display: flex;
+                align-items: center;
+                gap: 8px;
             }
-            #settings-btn:hover {
+            #system-config-btn:hover {
                 background: rgba(255, 255, 255, 0.2);
+                transform: translateY(-2px);
             }
 
-            /* Settings Modal */
-            #settings-modal-overlay {
+            /* Unified System Modal */
+            #system-modal-overlay {
                 position: fixed;
                 top: 0;
                 left: 0;
                 width: 100%;
                 height: 100%;
-                background: rgba(0, 0, 0, 0.8);
-                backdrop-filter: blur(5px);
+                background: rgba(0, 0, 0, 0.6);
+                backdrop-filter: blur(8px);
                 z-index: 200;
                 display: flex;
                 justify-content: center;
@@ -471,94 +478,163 @@
                 pointer-events: none;
                 transition: opacity 0.3s ease;
             }
-            #settings-modal-overlay.visible {
+            #system-modal-overlay.visible {
                 opacity: 1;
                 pointer-events: auto;
             }
-            #settings-modal {
-                background: #1a1a1a;
-                width: 600px;
+            #system-modal {
+                background: rgba(30, 30, 30, 0.8);
+                backdrop-filter: blur(20px);
+                width: 700px;
                 max-width: 90%;
-                border-radius: 12px;
-                padding: 30px;
-                border: 1px solid #333;
+                border-radius: 16px;
+                padding: 0;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+                overflow: hidden;
                 display: flex;
                 flex-direction: column;
-                gap: 15px;
-                box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+                max-height: 85vh;
             }
-            #settings-modal h3 {
-                margin: 0;
-                color: #fff;
-            }
-            #names-input {
-                width: 100%;
-                height: 300px;
-                background: #111;
-                border: 1px solid #333;
-                color: #eee;
-                padding: 15px;
-                border-radius: 8px;
-                resize: vertical;
-                font-family: monospace;
-                font-size: 14px;
-                box-sizing: border-box;
-            }
-            #names-input:focus {
-                outline: none;
-                border-color: #ff3366;
-            }
-            .stats-bar {
+            
+            .modal-header {
+                padding: 20px 30px;
+                background: rgba(0,0,0,0.2);
+                border-bottom: 1px solid rgba(255,255,255,0.05);
                 display: flex;
-                gap: 15px;
+                justify-content: space-between;
+                align-items: center;
+            }
+            
+            .modal-tabs {
+                display: flex;
+                gap: 20px;
+            }
+            
+            .tab-btn {
+                background: transparent;
+                border: none;
                 color: #888;
-                font-size: 0.9rem;
-            }
-            .separator { color: #444; }
-            strong { color: #fff; }
-
-            .warning-box {
-                background: rgba(255, 165, 0, 0.1);
-                border: 1px solid rgba(255, 165, 0, 0.3);
-                color: #ffaa00;
-                padding: 10px;
-                border-radius: 6px;
-                font-size: 0.9rem;
-                word-break: break-all;
-            }
-            .error-box {
-                background: rgba(255, 51, 102, 0.1);
-                border: 1px solid rgba(255, 51, 102, 0.3);
-                color: #ff3366;
-                padding: 10px;
-                border-radius: 6px;
-                font-size: 0.9rem;
-            }
-            .hidden { display: none; }
-
-            .modal-actions {
-                display: flex;
-                justify-content: flex-end;
-                gap: 10px;
-                margin-top: 10px;
-            }
-            .secondary-btn {
-                background: #333;
-                color: #ccc;
+                font-size: 1rem;
+                font-weight: bold;
+                padding: 10px 5px;
+                cursor: pointer;
+                position: relative;
                 box-shadow: none;
+                transform: none;
+                transition: color 0.2s;
+                border-radius: 0;
             }
-            .secondary-btn:hover {
-                background: #444;
+            
+            .tab-btn:hover {
+                color: #ccc;
+                background: transparent;
                 transform: none;
                 box-shadow: none;
+            }
+            
+            .tab-btn.active {
+                color: #fff;
+            }
+            
+            .tab-btn.active::after {
+                content: '';
+                position: absolute;
+                bottom: -21px; /* Adjust to align with header bottom */
+                left: 0;
+                width: 100%;
+                height: 3px;
+                background: #ff3366;
+                box-shadow: 0 -2px 10px rgba(255, 51, 102, 0.5);
+            }
+            
+            .close-modal-btn {
+                background: transparent;
+                border: none;
+                color: #666;
+                font-size: 1.5rem;
+                cursor: pointer;
+                padding: 0;
+                line-height: 1;
+                box-shadow: none;
+            }
+            .close-modal-btn:hover {
+                color: #fff;
+                background: transparent;
+                transform: none;
+                box-shadow: none;
+            }
+
+            .modal-body {
+                padding: 30px;
+                overflow-y: auto;
+                flex: 1;
+            }
+            
+            .tab-content {
+                display: none;
+                animation: fadeIn 0.3s ease;
+            }
+            .tab-content.active {
+                display: block;
+            }
+            
+            @keyframes fadeIn {
+                from { opacity: 0; transform: translateY(10px); }
+                to { opacity: 1; transform: translateY(0); }
+            }
+
+            /* Inputs & Forms */
+            .input-group {
+                margin-bottom: 20px;
+            }
+            label {
+                display: block;
+                color: #aaa;
+                margin-bottom: 8px;
+                font-size: 0.9rem;
+            }
+            
+            textarea, input[type="text"], input[type="number"] {
+                width: 100%;
+                background: rgba(0, 0, 0, 0.3);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                color: #fff;
+                padding: 12px;
+                border-radius: 8px;
+                font-family: inherit;
+                font-size: 1rem;
+                box-sizing: border-box;
+                transition: border-color 0.2s;
+            }
+            
+            textarea:focus, input:focus {
+                outline: none;
+                border-color: #ff3366;
+                background: rgba(0, 0, 0, 0.5);
+            }
+
+            /* Prize List Styling */
+            .prize-config-row {
+                display: flex;
+                gap: 15px;
+                align-items: center;
+                background: rgba(255, 255, 255, 0.03);
+                padding: 10px;
+                border-radius: 8px;
+                margin-bottom: 10px;
+                border: 1px solid transparent;
+                transition: border-color 0.2s;
+            }
+            .prize-config-row:hover {
+                border-color: rgba(255, 255, 255, 0.1);
             }
 		</style>
 	</head>
 	<body>
 		<div id="sphere-container">
             <div id="top-bar">
-                <button id="settings-btn">⚙️ 设置名单</button>
-                <button id="prizes-btn">🏆 奖项配置</button>
+                <button id="system-config-btn">⚙️ 系统配置</button>
             </div>
 			<canvas id="lottery-canvas"></canvas>
 			
@@ -596,41 +672,39 @@
                 </div>
             </div>
 
-            <!-- Settings Modal -->
-            <div id="settings-modal-overlay">
-                <div id="settings-modal">
-                    <h3>设置名单</h3>
-                    <div class="input-group">
-                        <textarea id="names-input" placeholder="请输入或粘贴姓名，每行一个..."></textarea>
+            <!-- Unified System Modal -->
+            <div id="system-modal-overlay">
+                <div id="system-modal">
+                    <div class="modal-header">
+                        <div class="modal-tabs">
+                            <button class="tab-btn active" data-tab="names">名单设置</button>
+                            <button class="tab-btn" data-tab="prizes">奖项配置</button>
+                        </div>
+                        <button class="close-modal-btn">&times;</button>
                     </div>
-                    <div class="stats-bar">
-                        <span>已导入: <strong id="valid-count">0</strong> 人</span>
-                        <span class="separator">|</span>
-                        <span class="text-muted">原始: <span id="raw-count">0</span> 行</span>
-                    </div>
-                    <div id="duplicate-warning" class="warning-box hidden">
-                        ⚠️ 检测到重复姓名：<span id="dup-list"></span>
-                    </div>
-                    <div id="empty-error" class="error-box hidden">
-                        ❌ 名单不能为空
-                    </div>
-                    <div class="modal-actions">
-                        <button id="cancel-settings-btn" class="secondary-btn">取消</button>
-                        <button id="apply-settings-btn" class="primary-btn">应用名单</button>
-                    </div>
-                </div>
-            </div>
+                    <div class="modal-body">
+                        <!-- Names Tab -->
+                        <div id="tab-names" class="tab-content active">
+                            <div class="input-group">
+                                <label>候选名单（每行一个名字）</label>
+                                <textarea id="names-input" placeholder="请输入或粘贴姓名，每行一个..." rows="15"></textarea>
+                            </div>
+                            <div class="stats-bar" style="display: flex; justify-content: space-between; align-items: center; color: #888;">
+                                <span>已导入: <strong id="valid-count" style="color: #fff">0</strong> 人</span>
+                                <div style="display: flex; gap: 10px;">
+                                    <button id="import-file-btn" class="dashed-btn">📂 导入文件</button>
+                                    <button id="save-names-btn" class="primary-btn">保存名单</button>
+                                </div>
+                            </div>
+                        </div>
 
-            <!-- Prize Config Modal -->
-            <div id="prize-modal-overlay">
-                <div id="prize-modal">
-                    <h3>奖项配置</h3>
-                    <div id="prize-list">
-                        <!-- Prize items -->
-                    </div>
-                    <button id="add-prize-btn" class="dashed-btn">+ 添加奖项</button>
-                    <div class="modal-actions">
-                        <button id="close-prize-btn" class="primary-btn">完成</button>
+                        <!-- Prizes Tab -->
+                        <div id="tab-prizes" class="tab-content">
+                            <div id="prize-list-config">
+                                <!-- Prize rows will be generated here -->
+                            </div>
+                            <button id="add-prize-btn" class="dashed-btn" style="width: 100%; margin-top: 15px;">+ 添加新奖项</button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -646,40 +720,42 @@
 			const canvas = document.getElementById('lottery-canvas') as HTMLCanvasElement;
 			const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
 			const statusDisplay = document.getElementById('status-display') as HTMLDivElement;
-			const modalOverlay = document.getElementById('modal-overlay') as HTMLDivElement;
+            
+            // System Modal Elements
+            const systemConfigBtn = document.getElementById('system-config-btn') as HTMLButtonElement;
+            const systemModalOverlay = document.getElementById('system-modal-overlay') as HTMLDivElement;
+            const closeModalBtn = document.querySelector('.close-modal-btn') as HTMLButtonElement;
+            const tabBtns = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            // Settings Elements (inside System Modal)
+            const namesInput = document.getElementById('names-input') as HTMLTextAreaElement;
+            const validCountEl = document.getElementById('valid-count') as HTMLElement;
+            const saveNamesBtn = document.getElementById('save-names-btn') as HTMLButtonElement;
+            const importFileBtn = document.getElementById('import-file-btn') as HTMLButtonElement;
+
+            // Prize Config Elements (inside System Modal)
+            const prizeListConfigEl = document.getElementById('prize-list-config') as HTMLDivElement;
+            const addPrizeBtn = document.getElementById('add-prize-btn') as HTMLButtonElement;
+
+            // Main UI Elements
+            const prizeSelect = document.getElementById('prize-select') as HTMLSelectElement;
+            const drawCountEl = document.getElementById('draw-count') as HTMLSpanElement;
+            const winnersContainer = document.getElementById('winners-container') as HTMLDivElement;
+            const clearResultsBtn = document.getElementById('clear-results-btn') as HTMLButtonElement;
+
+			// Result Modal Elements
+            const resultModalOverlay = document.getElementById('modal-overlay') as HTMLDivElement;
             const modalTitle = document.getElementById('modal-title') as HTMLDivElement;
             const modalWinnersList = document.getElementById('modal-winners-list') as HTMLDivElement;
             const currentHighlight = document.getElementById('current-highlight') as HTMLDivElement;
 			const nextBtn = document.getElementById('next-btn') as HTMLButtonElement;
-            const winnersContainer = document.getElementById('winners-container') as HTMLDivElement;
-            const clearResultsBtn = document.getElementById('clear-results-btn') as HTMLButtonElement;
-
-            // Prize UI
-            const prizeSelect = document.getElementById('prize-select') as HTMLSelectElement;
-            const drawCountEl = document.getElementById('draw-count') as HTMLSpanElement;
-            const prizesBtn = document.getElementById('prizes-btn') as HTMLButtonElement;
-            const prizeModalOverlay = document.getElementById('prize-modal-overlay') as HTMLDivElement;
-            const prizeListEl = document.getElementById('prize-list') as HTMLDivElement;
-            const addPrizeBtn = document.getElementById('add-prize-btn') as HTMLButtonElement;
-            const closePrizeBtn = document.getElementById('close-prize-btn') as HTMLButtonElement;
-
-            // Settings Elements
-            const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
-            const settingsOverlay = document.getElementById('settings-modal-overlay') as HTMLDivElement;
-            const cancelSettingsBtn = document.getElementById('cancel-settings-btn') as HTMLButtonElement;
-            const applySettingsBtn = document.getElementById('apply-settings-btn') as HTMLButtonElement;
-            const namesInput = document.getElementById('names-input') as HTMLTextAreaElement;
-            const validCountEl = document.getElementById('valid-count') as HTMLElement;
-            const rawCountEl = document.getElementById('raw-count') as HTMLElement;
-            const dupWarningEl = document.getElementById('duplicate-warning') as HTMLDivElement;
-            const dupListEl = document.getElementById('dup-list') as HTMLElement;
-            const emptyErrorEl = document.getElementById('empty-error') as HTMLDivElement;
 			
 			let sphere: LotterySphere | null = null;
 			let isLotteryRunning = false;
             
             // State
-            let currentNamesList = [...names]; // Candidates pool
+            let currentNamesList = [...names];
             let prizes: Prize[] = [
                 createPrize('一等奖', 1, '大奖'),
                 createPrize('二等奖', 2),
@@ -700,38 +776,132 @@
 				if (statusDisplay) statusDisplay.textContent = text;
 			}
             
-            // --- Prize Logic ---
-            
-            function renderPrizeOptions() {
-                if (!prizeSelect) return;
-                prizeSelect.innerHTML = '';
-                prizes.forEach(p => {
-                    const option = document.createElement('option');
-                    option.value = p.id;
-                    option.textContent = p.title;
-                    prizeSelect.appendChild(option);
-                });
-                prizeSelect.value = currentPrizeId;
-                updateCurrentPrizeInfo();
-            }
+            // --- System Modal Logic ---
 
-            function updateCurrentPrizeInfo() {
-                const p = prizes.find(x => x.id === currentPrizeId);
-                if (p && drawCountEl) {
-                    drawCountEl.textContent = p.count.toString();
-                }
-            }
-            
-            prizeSelect?.addEventListener('change', (e) => {
-                currentPrizeId = (e.target as HTMLSelectElement).value;
-                updateCurrentPrizeInfo();
+            // Open
+            systemConfigBtn?.addEventListener('click', () => {
+                systemModalOverlay.classList.add('visible');
+                // Initialize data in tabs
+                initNameSettings();
+                renderPrizeConfigList();
             });
 
-            // Prize Configuration Modal Logic
+            // Close
+            function closeSystemModal() {
+                systemModalOverlay.classList.remove('visible');
+            }
+            closeModalBtn?.addEventListener('click', closeSystemModal);
+            systemModalOverlay?.addEventListener('click', (e) => {
+                if (e.target === systemModalOverlay) closeSystemModal();
+            });
+            document.addEventListener('keydown', (e) => {
+                if (e.key === 'Escape') {
+                    closeSystemModal();
+                    resultModalOverlay.classList.remove('visible');
+                }
+            });
+
+            // Tabs
+            tabBtns.forEach((btn, index) => {
+                btn.addEventListener('click', () => {
+                    // Deactivate all
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    
+                    // Activate current
+                    btn.classList.add('active');
+                    // Find the tab content that matches the data-tab
+                    const tabId = (btn as HTMLElement).dataset.tab;
+                    const content = document.getElementById(`tab-${tabId}`);
+                    content?.classList.add('active');
+                });
+            });
+
+            // --- Name Settings Logic ---
+
+            function initNameSettings() {
+                // If textarea is empty but we have names, fill it
+                if (namesInput && !namesInput.value && currentNamesList.length > 0) {
+                    namesInput.value = currentNamesList.join('\n');
+                    processInput();
+                }
+            }
+
+            function processInput() {
+                if (!namesInput) return [];
+                const rawText = namesInput.value;
+                const lines = rawText.split('\n');
+                
+                const validNames: string[] = [];
+                const seen = new Set<string>();
+                
+                lines.forEach(line => {
+                    const clean = line.trim().replace(/\s+/g, ' ');
+                    if (!clean) return;
+                    
+                    if (!seen.has(clean)) {
+                        seen.add(clean);
+                        validNames.push(clean);
+                    }
+                });
+                
+                // Update UI
+                if (validCountEl) validCountEl.textContent = validNames.length.toString();
+                
+                if (validNames.length === 0) {
+                    if (saveNamesBtn) saveNamesBtn.disabled = true;
+                } else {
+                    if (saveNamesBtn) saveNamesBtn.disabled = false;
+                }
+                
+                return validNames;
+            }
+
+            namesInput?.addEventListener('input', processInput);
+
+            saveNamesBtn?.addEventListener('click', () => {
+                const newNames = processInput();
+                if (newNames.length === 0) return;
+                
+                if (confirm('保存名单将重置当前的抽奖状态，确定吗？')) {
+                    currentNamesList = newNames;
+                    results = {};
+                    renderResultsPanel();
+                    sphere?.setNames(newNames);
+                    
+                    updateStatus('名单已更新');
+                    // Optional: Close modal or just give feedback
+                    alert('名单已保存！');
+                }
+            });
+
+            importFileBtn?.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.txt,.csv';
+                input.onchange = (e) => {
+                    const file = (e.target as HTMLInputElement).files?.[0];
+                    if (!file) return;
+                    
+                    const reader = new FileReader();
+                    reader.onload = (e) => {
+                        const text = e.target?.result as string;
+                        if (text && namesInput) {
+                            namesInput.value = text;
+                            processInput();
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            });
+
+            // --- Prize Config Logic ---
+
             function renderPrizeConfigList() {
-                if (!prizeListEl) return;
-                prizeListEl.innerHTML = '';
-                prizes.forEach((p, index) => {
+                if (!prizeListConfigEl) return;
+                prizeListConfigEl.innerHTML = '';
+                prizes.forEach((p) => {
                     const row = document.createElement('div');
                     row.className = 'prize-config-row';
                     row.innerHTML = `
@@ -761,20 +931,17 @@
                             alert('至少保留一个奖项');
                             return;
                         }
+                        if (!confirm(`确定要删除奖项“${p.title}”吗？`)) return;
+                        
                         prizes = prizes.filter(x => x.id !== p.id);
                         if (currentPrizeId === p.id) currentPrizeId = prizes[0].id;
                         renderPrizeConfigList();
                         renderPrizeOptions();
                     });
                     
-                    prizeListEl.appendChild(row);
+                    prizeListConfigEl.appendChild(row);
                 });
             }
-
-            prizesBtn?.addEventListener('click', () => {
-                prizeModalOverlay.classList.add('visible');
-                renderPrizeConfigList();
-            });
 
             addPrizeBtn?.addEventListener('click', () => {
                 prizes.push(createPrize(`新奖项 ${prizes.length + 1}`, 1));
@@ -782,17 +949,32 @@
                 renderPrizeOptions();
             });
 
-            closePrizeBtn?.addEventListener('click', () => {
-                // Validate
-                const error = validatePrizeList(prizes);
-                if (error) {
-                    alert(error);
-                    return;
-                }
-                prizeModalOverlay.classList.remove('visible');
-            });
+            // --- Main Lottery Logic ---
 
-            // --- Results Logic ---
+            function renderPrizeOptions() {
+                if (!prizeSelect) return;
+                prizeSelect.innerHTML = '';
+                prizes.forEach(p => {
+                    const option = document.createElement('option');
+                    option.value = p.id;
+                    option.textContent = p.title;
+                    prizeSelect.appendChild(option);
+                });
+                prizeSelect.value = currentPrizeId;
+                updateCurrentPrizeInfo();
+            }
+
+            function updateCurrentPrizeInfo() {
+                const p = prizes.find(x => x.id === currentPrizeId);
+                if (p && drawCountEl) {
+                    drawCountEl.textContent = p.count.toString();
+                }
+            }
+            
+            prizeSelect?.addEventListener('change', (e) => {
+                currentPrizeId = (e.target as HTMLSelectElement).value;
+                updateCurrentPrizeInfo();
+            });
 
             function renderResultsPanel() {
                 if (!winnersContainer) return;
@@ -807,9 +989,9 @@
                     group.innerHTML = `<h4>${p.title}</h4>`;
                     
                     const list = document.createElement('div');
+                    group.appendChild(list);
                     list.className = 'winner-group-list';
                     list.textContent = winners.join('、');
-                    group.appendChild(list);
                     
                     winnersContainer.appendChild(group);
                 });
@@ -819,25 +1001,44 @@
                 if (confirm('确定要清空所有中奖记录并重置名单吗？')) {
                     results = {};
                     renderResultsPanel();
-                    // Restore names
-                    const namesToRestore = processInput(); // Get from textarea
-                    currentNamesList = namesToRestore;
+                    
+                    // Restore names from full list (or just reload page? No, better state reset)
+                    // Actually, we should restore to what's in the Name Settings or original
+                    // Let's assume processInput gives us the "Configured" list
+                    const namesToRestore = processInput(); 
+                    if (namesToRestore.length > 0) {
+                        currentNamesList = namesToRestore;
+                    }
+                    
                     sphere?.setNames(currentNamesList);
                     updateStatus('已重置');
                     startBtn.disabled = false;
                 }
             });
 
-            // --- Main Flow ---
-
-            // Initial render
-            renderPrizeOptions();
-
             startBtn?.addEventListener('click', () => {
                 if (isLotteryRunning) return;
                 
                 const prize = prizes.find(p => p.id === currentPrizeId);
                 if (!prize) return;
+                
+                // Check if we need to overwrite
+                const existingWinners = results[prize.id];
+                if (existingWinners && existingWinners.length > 0) {
+                    if (!confirm(`【${prize.title}】已经抽取过，再次抽取将覆盖原有结果。确定要重抽吗？`)) {
+                        return;
+                    }
+                    
+                    // Rollback candidates
+                    // Add existing winners back to pool
+                    currentNamesList.push(...existingWinners);
+                    // Clear result
+                    delete results[prize.id];
+                    // Visual update (re-add names to sphere if we removed them)
+                    sphere?.setNames(currentNamesList);
+                    // Update sidebar
+                    renderResultsPanel();
+                }
                 
                 if (currentNamesList.length < prize.count) {
                     alert(`剩余人数不足！当前剩余 ${currentNamesList.length} 人，需要 ${prize.count} 人。`);
@@ -846,160 +1047,65 @@
                 
                 isLotteryRunning = true;
                 startBtn.disabled = true;
-                settingsBtn.disabled = true;
-                prizesBtn.disabled = true;
+                systemConfigBtn.disabled = true;
                 prizeSelect.disabled = true;
                 updateStatus(`正在抽取 ${prize.title}...`);
                 
                 // 1. Start spinning
                 sphere?.spin();
                 
-                // 2. Draw winners logic (simulate delay or do it immediately)
-                // Let's do it immediately but wait a bit before stopping
+                // 2. Draw winners
                 const { winners, remainingCandidates } = drawWinners(currentNamesList, prize.count);
                 
-                // Update state
-                currentNamesList = remainingCandidates;
-                if (!results[prize.id]) results[prize.id] = [];
-                results[prize.id].push(...winners);
-                
-                // 3. Stop after 2 seconds
+                // 3. Stop after delay
                 setTimeout(() => {
-                    // Update sphere logic to stop and highlight
                     sphere?.stopAndHighlightWinners(
                         winners, 
                         (name) => {
-                            // On highlight one winner
                             if (currentHighlight) {
                                 currentHighlight.textContent = name;
                                 currentHighlight.classList.remove('pop');
-                                void currentHighlight.offsetWidth; // trigger reflow
+                                void currentHighlight.offsetWidth;
                                 currentHighlight.classList.add('pop');
                             }
                         },
                         () => {
-                            // On all finished
+                            // Finished
                             isLotteryRunning = false;
                             updateStatus('抽奖完成');
                             
+                            // Commit results
+                            currentNamesList = remainingCandidates;
+                            results[prize.id] = winners;
+                            
                             // Show modal
-                            modalOverlay.classList.add('visible');
+                            resultModalOverlay.classList.add('visible');
                             if (modalTitle) modalTitle.textContent = `${prize.title} 结果`;
                             if (modalWinnersList) {
                                 modalWinnersList.innerHTML = winners.map(w => `<span class="badge">${w}</span>`).join('');
                             }
-                            if (currentHighlight) currentHighlight.textContent = ''; // Clear highlight text
+                            if (currentHighlight) currentHighlight.textContent = '';
                             
-                            // Render sidebar results
                             renderResultsPanel();
                             
-                            // Remove winners from sphere visuals
-                            winners.forEach(w => sphere?.removeWinner(w));
+                            // Remove winners from sphere (visual only, state is already updated)
+                            sphere?.setNames(currentNamesList);
                         }
                     );
                 }, 2000);
             });
 
             nextBtn?.addEventListener('click', () => {
-                modalOverlay.classList.remove('visible');
+                resultModalOverlay.classList.remove('visible');
                 updateStatus('准备就绪');
                 
-                if (currentNamesList.length === 0) {
-                    startBtn.disabled = true;
-                    updateStatus('所有名单已抽完');
-                } else {
-                    startBtn.disabled = false;
-                }
-                
-                settingsBtn.disabled = false;
-                prizesBtn.disabled = false;
+                startBtn.disabled = false;
+                systemConfigBtn.disabled = false;
                 prizeSelect.disabled = false;
             });
 
-            // --- Existing Settings Logic (Process Input) ---
-            // (Kept mostly same, just added return type to processInput used above)
-            
-            function processInput() {
-                if (!namesInput) return [];
-                const rawText = namesInput.value;
-                const lines = rawText.split('\n');
-                
-                const validNames: string[] = [];
-                const duplicates: string[] = [];
-                const seen = new Set<string>();
-                
-                lines.forEach(line => {
-                    const clean = line.trim().replace(/\s+/g, ' ');
-                    if (!clean) return;
-                    
-                    if (seen.has(clean)) {
-                        duplicates.push(clean);
-                    } else {
-                        seen.add(clean);
-                        validNames.push(clean);
-                    }
-                });
-                
-                // Update UI (Counts)
-                if (rawCountEl) rawCountEl.textContent = lines.length.toString();
-                if (validCountEl) validCountEl.textContent = validNames.length.toString();
-                
-                // Duplicates
-                if (duplicates.length > 0) {
-                    dupWarningEl?.classList.remove('hidden');
-                    const top10 = duplicates.slice(0, 10);
-                    let msg = top10.join(', ');
-                    if (duplicates.length > 10) msg += ' 等';
-                    if (dupListEl) dupListEl.textContent = msg;
-                } else {
-                    dupWarningEl?.classList.add('hidden');
-                }
-                
-                // Empty check
-                if (validNames.length === 0) {
-                    emptyErrorEl?.classList.remove('hidden');
-                    if (applySettingsBtn) applySettingsBtn.disabled = true;
-                } else {
-                    emptyErrorEl?.classList.add('hidden');
-                    if (applySettingsBtn) applySettingsBtn.disabled = false;
-                }
-                
-                return validNames;
-            }
-
-            // Settings Event Listeners
-            settingsBtn?.addEventListener('click', () => {
-                settingsOverlay.classList.add('visible');
-                // If we have current names, we might want to sync back to textarea if it was empty?
-                // But usually we trust the textarea content as the source of truth for "Reset".
-                // If textarea is empty, maybe fill it?
-                if (namesInput && !namesInput.value && currentNamesList.length > 0) {
-                    namesInput.value = currentNamesList.join('\n');
-                }
-                processInput();
-            });
-
-            cancelSettingsBtn?.addEventListener('click', () => {
-                settingsOverlay.classList.remove('visible');
-            });
-
-            namesInput?.addEventListener('input', processInput);
-
-            applySettingsBtn?.addEventListener('click', () => {
-                const newNames = processInput();
-                if (newNames.length === 0) return;
-                
-                if (confirm('应用新名单将清空当前中奖记录，确定吗？')) {
-                    currentNamesList = newNames;
-                    results = {};
-                    renderResultsPanel();
-                    sphere?.setNames(newNames);
-                    
-                    startBtn.disabled = false;
-                    updateStatus('准备就绪');
-                    settingsOverlay.classList.remove('visible');
-                }
-            });
+            // Init
+            renderPrizeOptions();
 		</script>
 	</body>
 </html>
