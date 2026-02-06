@@ -133,7 +133,7 @@ export class LotterySphere {
     const sprite = new THREE.Sprite(material);
     // Scale sprite to match aspect ratio of text
     // We need to access image dimensions from texture
-    const image = texture.image;
+    const image = texture.image as HTMLCanvasElement;
     const scale = 0.5; // global scale factor
     sprite.scale.set(image.width * scale, image.height * scale, 1);
     
@@ -366,6 +366,23 @@ export class LotterySphere {
       // Option B: Re-distribute remaining (jumpy)
       // Let's stick with Option A for now as it feels more physical like taking a ball out.
     }
+  }
+
+  public setNames(names: string[]) {
+    // Clear existing sprites
+    while (this.group.children.length > 0) {
+      const child = this.group.children[0];
+      if (child instanceof THREE.Sprite) {
+        child.material.dispose();
+      }
+      this.group.remove(child);
+    }
+    
+    // Update names list
+    this.names = names;
+    
+    // Re-initialize sphere with new names
+    this.init();
   }
 
   public destroy() {

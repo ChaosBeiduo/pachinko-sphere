@@ -9,6 +9,7 @@ A 3D lottery drawing application built with Astro and Three.js. Features a beaut
 - **Fair Selection**: Uses `crypto.getRandomValues` for cryptographically strong random selection.
 - **Responsive**: Adapts to window resizing and handles high DPR screens (max 2x).
 - **Interactive UI**: 
+  - **New**: Settings panel to import/edit names at runtime.
   - Smooth animation states (Accelerate -> Constant -> Decelerate).
   - "Winner" alignment to camera.
   - Modal announcement with visual effects.
@@ -44,7 +45,10 @@ Visit `http://localhost:4321` in your browser.
 
 ### Modifying the Name List
 
-Edit `src/data/name.ts` to update the list of participants. The file should export an array of strings:
+You can modify the list in two ways:
+
+1. **Runtime**: Click the "⚙️ 设置名单" button in the top-left corner to paste or type a new list of names. The app automatically handles duplicates and cleaning.
+2. **Code**: Edit `src/data/name.ts` to update the default list of participants. The file should export an array of strings:
 
 ```typescript
 // src/data/name.ts

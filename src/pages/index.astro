@@ -203,10 +203,130 @@
 				transform: translateY(-2px);
 				box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
 			}
+
+            /* Settings Button */
+            #settings-btn {
+                position: absolute;
+                top: 20px;
+                left: 20px;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(5px);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                padding: 10px 20px;
+                border-radius: 30px;
+                color: white;
+                font-size: 0.9rem;
+                cursor: pointer;
+                z-index: 20;
+                transition: all 0.2s;
+            }
+            #settings-btn:hover {
+                background: rgba(255, 255, 255, 0.2);
+            }
+
+            /* Settings Modal */
+            #settings-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.8);
+                backdrop-filter: blur(5px);
+                z-index: 200;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+            #settings-modal-overlay.visible {
+                opacity: 1;
+                pointer-events: auto;
+            }
+            #settings-modal {
+                background: #1a1a1a;
+                width: 600px;
+                max-width: 90%;
+                border-radius: 12px;
+                padding: 30px;
+                border: 1px solid #333;
+                display: flex;
+                flex-direction: column;
+                gap: 15px;
+                box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+            }
+            #settings-modal h3 {
+                margin: 0;
+                color: #fff;
+            }
+            #names-input {
+                width: 100%;
+                height: 300px;
+                background: #111;
+                border: 1px solid #333;
+                color: #eee;
+                padding: 15px;
+                border-radius: 8px;
+                resize: vertical;
+                font-family: monospace;
+                font-size: 14px;
+                box-sizing: border-box;
+            }
+            #names-input:focus {
+                outline: none;
+                border-color: #ff3366;
+            }
+            .stats-bar {
+                display: flex;
+                gap: 15px;
+                color: #888;
+                font-size: 0.9rem;
+            }
+            .separator { color: #444; }
+            strong { color: #fff; }
+
+            .warning-box {
+                background: rgba(255, 165, 0, 0.1);
+                border: 1px solid rgba(255, 165, 0, 0.3);
+                color: #ffaa00;
+                padding: 10px;
+                border-radius: 6px;
+                font-size: 0.9rem;
+                word-break: break-all;
+            }
+            .error-box {
+                background: rgba(255, 51, 102, 0.1);
+                border: 1px solid rgba(255, 51, 102, 0.3);
+                color: #ff3366;
+                padding: 10px;
+                border-radius: 6px;
+                font-size: 0.9rem;
+            }
+            .hidden { display: none; }
+
+            .modal-actions {
+                display: flex;
+                justify-content: flex-end;
+                gap: 10px;
+                margin-top: 10px;
+            }
+            .secondary-btn {
+                background: #333;
+                color: #ccc;
+                box-shadow: none;
+            }
+            .secondary-btn:hover {
+                background: #444;
+                transform: none;
+                box-shadow: none;
+            }
 		</style>
 	</head>
 	<body>
 		<div id="sphere-container">
+            <button id="settings-btn">⚙️ 设置名单</button>
 			<canvas id="lottery-canvas"></canvas>
 			
 			<div id="ui-layer">
@@ -228,6 +348,31 @@
                     <button class="next-btn" id="next-btn">下一位</button>
                 </div>
             </div>
+
+            <!-- Settings Modal -->
+            <div id="settings-modal-overlay">
+                <div id="settings-modal">
+                    <h3>设置名单</h3>
+                    <div class="input-group">
+                        <textarea id="names-input" placeholder="请输入或粘贴姓名，每行一个..."></textarea>
+                    </div>
+                    <div class="stats-bar">
+                        <span>已导入: <strong id="valid-count">0</strong> 人</span>
+                        <span class="separator">|</span>
+                        <span class="text-muted">原始: <span id="raw-count">0</span> 行</span>
+                    </div>
+                    <div id="duplicate-warning" class="warning-box hidden">
+                        ⚠️ 检测到重复姓名：<span id="dup-list"></span>
+                    </div>
+                    <div id="empty-error" class="error-box hidden">
+                        ❌ 名单不能为空
+                    </div>
+                    <div class="modal-actions">
+                        <button id="cancel-settings-btn" class="secondary-btn">取消</button>
+                        <button id="apply-settings-btn" class="primary-btn">应用名单</button>
+                    </div>
+                </div>
+            </div>
 		</div>
 
 		<script>
@@ -241,13 +386,26 @@
 			const winnerNameEl = document.getElementById('winner-name') as HTMLHeadingElement;
 			const nextBtn = document.getElementById('next-btn') as HTMLButtonElement;
             const winnersList = document.getElementById('winners-list') as HTMLUListElement;
+
+            // Settings Elements
+            const settingsBtn = document.getElementById('settings-btn') as HTMLButtonElement;
+            const settingsOverlay = document.getElementById('settings-modal-overlay') as HTMLDivElement;
+            const cancelSettingsBtn = document.getElementById('cancel-settings-btn') as HTMLButtonElement;
+            const applySettingsBtn = document.getElementById('apply-settings-btn') as HTMLButtonElement;
+            const namesInput = document.getElementById('names-input') as HTMLTextAreaElement;
+            const validCountEl = document.getElementById('valid-count') as HTMLElement;
+            const rawCountEl = document.getElementById('raw-count') as HTMLElement;
+            const dupWarningEl = document.getElementById('duplicate-warning') as HTMLDivElement;
+            const dupListEl = document.getElementById('dup-list') as HTMLElement;
+            const emptyErrorEl = document.getElementById('empty-error') as HTMLDivElement;
 			
 			let sphere: LotterySphere | null = null;
 			let isLotteryRunning = false;
+            let currentNamesList = [...names]; // Copy initial names
 
 			if (canvas) {
 				// Initialize the sphere
-				sphere = new LotterySphere(canvas, names);
+				sphere = new LotterySphere(canvas, currentNamesList);
 			}
             
             // Clean up resources when the page is unloaded
@@ -268,6 +426,104 @@
                 // Insert at the top
                 winnersList.insertBefore(li, winnersList.firstChild);
             }
+
+            // --- Settings Logic ---
+
+            function processInput() {
+                if (!namesInput) return [];
+                const rawText = namesInput.value;
+                const lines = rawText.split('\n');
+                const rawCount = lines.length;
+                
+                const validNames: string[] = [];
+                const duplicates: string[] = [];
+                const seen = new Set<string>();
+                
+                lines.forEach(line => {
+                    // Clean: trim, merge spaces
+                    const clean = line.trim().replace(/\s+/g, ' ');
+                    if (!clean) return;
+                    
+                    if (seen.has(clean)) {
+                        duplicates.push(clean);
+                    } else {
+                        seen.add(clean);
+                        validNames.push(clean);
+                    }
+                });
+                
+                // Update UI
+                if (rawCountEl) rawCountEl.textContent = rawCount.toString();
+                if (validCountEl) validCountEl.textContent = validNames.length.toString();
+                
+                // Duplicates
+                if (duplicates.length > 0) {
+                    dupWarningEl?.classList.remove('hidden');
+                    // Top 10
+                    const top10 = duplicates.slice(0, 10);
+                    let msg = top10.join(', ');
+                    if (duplicates.length > 10) msg += ' 等';
+                    if (dupListEl) dupListEl.textContent = msg;
+                } else {
+                    dupWarningEl?.classList.add('hidden');
+                }
+                
+                // Empty check
+                if (validNames.length === 0) {
+                    emptyErrorEl?.classList.remove('hidden');
+                    if (applySettingsBtn) applySettingsBtn.disabled = true;
+                } else {
+                    emptyErrorEl?.classList.add('hidden');
+                    if (applySettingsBtn) applySettingsBtn.disabled = false;
+                }
+                
+                return validNames;
+            }
+
+            if (settingsBtn) {
+                settingsBtn.addEventListener('click', () => {
+                    if (settingsOverlay) settingsOverlay.classList.add('visible');
+                    // Pre-fill with current names
+                    if (namesInput) {
+                        namesInput.value = currentNamesList.join('\n');
+                        processInput();
+                    }
+                });
+            }
+
+            if (cancelSettingsBtn) {
+                cancelSettingsBtn.addEventListener('click', () => {
+                    if (settingsOverlay) settingsOverlay.classList.remove('visible');
+                });
+            }
+
+            if (namesInput) {
+                namesInput.addEventListener('input', processInput);
+            }
+
+            if (applySettingsBtn) {
+                applySettingsBtn.addEventListener('click', () => {
+                    const newNames = processInput();
+                    if (newNames.length === 0) return;
+                    
+                    currentNamesList = newNames;
+                    
+                    if (sphere) {
+                        sphere.setNames(newNames);
+                    }
+                    
+                    // Reset winners list
+                    if (winnersList) winnersList.innerHTML = '';
+                    
+                    // Enable start button
+                    if (startBtn) startBtn.disabled = false;
+                    updateStatus('准备就绪');
+                    
+                    if (settingsOverlay) settingsOverlay.classList.remove('visible');
+                });
+            }
+
+            // --- End Settings Logic ---
 
 			if (startBtn && sphere) {
 				startBtn.addEventListener('click', () => {
