@@ -311,6 +311,31 @@ export class LotterySphere {
     // No, Y axis is fine for a "spinning top" feel.
   }
 
+  public removeWinner(name: string) {
+    const spriteIndex = this.group.children.findIndex(
+      child => child.userData.name === name
+    );
+
+    if (spriteIndex !== -1) {
+      const sprite = this.group.children[spriteIndex] as THREE.Sprite;
+      
+      // Animate removal or just remove
+      // For now, just remove immediately
+      sprite.material.map?.dispose();
+      sprite.material.dispose();
+      this.group.remove(sprite);
+      
+      // Update names array so they can't be picked again
+      this.names = this.names.filter(n => n !== name);
+      
+      // Re-layout sphere? 
+      // If we remove one, a gap appears. 
+      // Option A: Leave the gap (simpler, shows progress)
+      // Option B: Re-distribute remaining (jumpy)
+      // Let's stick with Option A for now as it feels more physical like taking a ball out.
+    }
+  }
+
   public destroy() {
     if (this.animationId !== null) {
       cancelAnimationFrame(this.animationId);

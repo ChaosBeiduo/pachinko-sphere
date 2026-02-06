@@ -81,58 +81,127 @@
 				min-height: 2rem;
 			}
 
+            /* Winners List */
+            #winners-list-container {
+                position: absolute;
+                top: 20px;
+                right: 20px;
+                width: 250px;
+                max-height: 50vh;
+                background: rgba(0, 0, 0, 0.5);
+                backdrop-filter: blur(5px);
+                border-radius: 12px;
+                padding: 15px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                overflow-y: auto;
+                pointer-events: auto;
+            }
+            
+            #winners-list-container h3 {
+                margin: 0 0 10px 0;
+                font-size: 1rem;
+                color: #aaa;
+                text-transform: uppercase;
+                border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+                padding-bottom: 5px;
+            }
+            
+            #winners-list {
+                list-style: none;
+                padding: 0;
+                margin: 0;
+            }
+            
+            #winners-list li {
+                padding: 5px 0;
+                font-size: 1.1rem;
+                color: #ffd700;
+                display: flex;
+                align-items: center;
+                gap: 10px;
+            }
+            
+            #winners-list li::before {
+                content: '★';
+                font-size: 0.8rem;
+                color: #ff3366;
+            }
+
+            /* Result Modal Overlay */
+            #modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.7);
+                backdrop-filter: blur(3px);
+                z-index: 100;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.3s ease;
+            }
+            
+            #modal-overlay.visible {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
 			#result-modal {
-				position: absolute;
-				top: 50%;
-				left: 50%;
-				transform: translate(-50%, -50%);
-				background: rgba(0, 0, 0, 0.85);
-				padding: 40px;
+				background: rgba(20, 20, 20, 0.95);
+				padding: 50px 80px;
 				border-radius: 20px;
-				border: 2px solid rgba(255, 255, 255, 0.2);
+				border: 1px solid rgba(255, 255, 255, 0.2);
 				text-align: center;
-				backdrop-filter: blur(10px);
-				display: none;
-				opacity: 0;
-				transition: opacity 0.3s;
-				z-index: 20;
-				pointer-events: auto;
+				box-shadow: 0 0 50px rgba(0,0,0,0.5);
+				transform: scale(0.9);
+				transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 			}
 			
-			#result-modal.visible {
-				display: block;
-				opacity: 1;
-			}
+            #modal-overlay.visible #result-modal {
+                transform: scale(1);
+            }
 			
 			.winner-title {
-				font-size: 1.2rem;
-				color: #aaa;
-				margin-bottom: 10px;
+				font-size: 1.5rem;
+				color: #fff;
+				margin-bottom: 20px;
 				text-transform: uppercase;
+                letter-spacing: 2px;
 			}
 			
 			.winner-name {
-				font-size: 3rem;
+				font-size: 4rem;
 				font-weight: 800;
-				background: linear-gradient(45deg, #ffd700, #ffaa00);
+				background: linear-gradient(45deg, #ffd700, #ffaa00, #ffea00);
+                background-size: 200% auto;
 				-webkit-background-clip: text;
 				-webkit-text-fill-color: transparent;
 				margin: 0;
+                animation: shine 3s linear infinite;
 			}
+            
+            @keyframes shine {
+                to {
+                    background-position: 200% center;
+                }
+            }
 
-			.close-btn {
-				margin-top: 20px;
-				background: transparent;
-				border: 1px solid rgba(255, 255, 255, 0.3);
-				padding: 8px 20px;
-				font-size: 0.9rem;
-				box-shadow: none;
+			.next-btn {
+				margin-top: 40px;
+                padding: 15px 40px;
+                font-size: 1.3rem;
+                background: white;
+                color: #111;
 			}
 			
-			.close-btn:hover {
-				background: rgba(255, 255, 255, 0.1);
-				transform: none;
-				box-shadow: none;
+			.next-btn:hover {
+                background: #eee;
+				transform: translateY(-2px);
+				box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
 			}
 		</style>
 	</head>
@@ -144,12 +213,21 @@
 				<div id="status-display">准备就绪</div>
 				<button id="start-btn">开始抽奖</button>
 			</div>
+            
+            <div id="winners-list-container">
+                <h3>已中奖名单</h3>
+                <ul id="winners-list">
+                    <!-- Winners will be added here -->
+                </ul>
+            </div>
 			
-			<div id="result-modal">
-				<div class="winner-title">中奖者</div>
-				<h2 class="winner-name" id="winner-name">---</h2>
-				<button class="close-btn" id="close-btn">关闭</button>
-			</div>
+            <div id="modal-overlay">
+                <div id="result-modal">
+                    <div class="winner-title">🎉 恭喜 🎉</div>
+                    <h2 class="winner-name" id="winner-name">---</h2>
+                    <button class="next-btn" id="next-btn">下一位</button>
+                </div>
+            </div>
 		</div>
 
 		<script>
@@ -159,9 +237,10 @@
 			const canvas = document.getElementById('lottery-canvas') as HTMLCanvasElement;
 			const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
 			const statusDisplay = document.getElementById('status-display') as HTMLDivElement;
-			const resultModal = document.getElementById('result-modal') as HTMLDivElement;
+			const modalOverlay = document.getElementById('modal-overlay') as HTMLDivElement;
 			const winnerNameEl = document.getElementById('winner-name') as HTMLHeadingElement;
-			const closeBtn = document.getElementById('close-btn') as HTMLButtonElement;
+			const nextBtn = document.getElementById('next-btn') as HTMLButtonElement;
+            const winnersList = document.getElementById('winners-list') as HTMLUListElement;
 			
 			let sphere: LotterySphere | null = null;
 			let isLotteryRunning = false;
@@ -174,6 +253,14 @@
 			function updateStatus(text: string) {
 				if (statusDisplay) statusDisplay.textContent = text;
 			}
+            
+            function addWinnerToList(name: string) {
+                if (!winnersList) return;
+                const li = document.createElement('li');
+                li.textContent = name;
+                // Insert at the top
+                winnersList.insertBefore(li, winnersList.firstChild);
+            }
 
 			if (startBtn && sphere) {
 				startBtn.addEventListener('click', () => {
@@ -183,27 +270,33 @@
 					startBtn.disabled = true;
 					updateStatus('抽奖中...');
 					
-					// Hide previous result if any
-					resultModal.classList.remove('visible');
-					
 					sphere?.startLottery((winner) => {
 						isLotteryRunning = false;
-						startBtn.disabled = false;
+						// Don't enable start btn yet, wait for "Next"
 						updateStatus('抽奖结束');
 						
 						// Show result
 						if (winnerNameEl) winnerNameEl.textContent = winner;
-						resultModal.classList.add('visible');
-						
-						// Fire confetti? (Maybe later)
+						modalOverlay.classList.add('visible');
+                        
+                        // Add to list immediately or after close? 
+                        // Let's add immediately so it's there when they look back
+                        addWinnerToList(winner);
 					});
 				});
 			}
 			
-			if (closeBtn) {
-				closeBtn.addEventListener('click', () => {
-					resultModal.classList.remove('visible');
+			if (nextBtn) {
+				nextBtn.addEventListener('click', () => {
+					modalOverlay.classList.remove('visible');
 					updateStatus('准备就绪');
+                    startBtn.disabled = false;
+                    
+                    // Remove winner from sphere
+                    const winnerName = winnerNameEl.textContent;
+                    if (winnerName && sphere) {
+                        sphere.removeWinner(winnerName);
+                    }
 				});
 			}
 		</script>
