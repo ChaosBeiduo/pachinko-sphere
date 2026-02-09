@@ -29,7 +29,8 @@ export class LotterySphere {
   private startQuaternion = new THREE.Quaternion();
   private endQuaternion = new THREE.Quaternion();
   private extraRotationAxis = new THREE.Vector3(0, 1, 0);
-  private extraRotationRevs = 2; // Extra revolutions during deceleration
+  private extraRotationRevs = 24; // Extra revolutions during deceleration
+  private decelerationDuration = 10000;
 
   // Texture Cache
   private textureCache: Map<string, THREE.Texture> = new Map();
@@ -235,7 +236,7 @@ export class LotterySphere {
       this.group.rotation.y += this.maxSpeed.y;
       this.group.rotation.x += this.maxSpeed.x;
     } else if (this.state === 'decelerating') {
-      const duration = 1500;
+      const duration = this.decelerationDuration;
       const progress = Math.min((now - this.stateStartTime) / duration, 1);
       
       // Use cubic ease out for smooth landing
@@ -312,7 +313,8 @@ export class LotterySphere {
     this.startQuaternion.copy(this.group.quaternion);
     this.extraRotationAxis.set(0, 1, 0); 
     // Reset revs for full deceleration
-    this.extraRotationRevs = 2;
+    this.extraRotationRevs = 24;
+    this.decelerationDuration = 12000;
   }
 
   private prepareTransitionToNext(targetName: string) {
@@ -336,6 +338,7 @@ export class LotterySphere {
       
       // No extra spin for transitioning between winners
       this.extraRotationRevs = 0;
+      this.decelerationDuration = 1500;
       
       this.state = 'decelerating';
       // Hack: we reuse 'decelerating' state logic, but duration is hardcoded to 1500 there.
