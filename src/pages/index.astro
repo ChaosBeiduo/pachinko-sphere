@@ -629,12 +629,32 @@
             .prize-config-row:hover {
                 border-color: rgba(255, 255, 255, 0.1);
             }
+
+            /* Language Switcher */
+            .lang-switcher {
+                margin-left: auto;
+                margin-right: 20px;
+            }
+            .lang-select {
+                background: rgba(255, 255, 255, 0.1);
+                border: 1px solid rgba(255, 255, 255, 0.2);
+                color: #ccc;
+                padding: 5px 10px;
+                border-radius: 4px;
+                font-size: 0.9rem;
+                cursor: pointer;
+                outline: none;
+            }
+            .lang-select option {
+                background: #333;
+                color: white;
+            }
 		</style>
 	</head>
 	<body>
 		<div id="sphere-container">
             <div id="top-bar">
-                <button id="system-config-btn">⚙️ 系统配置</button>
+                <button id="system-config-btn" data-i18n="systemConfig">⚙️ 系统配置</button>
             </div>
 			<canvas id="lottery-canvas"></canvas>
 			
@@ -645,30 +665,30 @@
                             <!-- Prizes will be populated here -->
                         </select>
                         <div class="prize-info">
-                            本次抽取 <span id="draw-count">0</span> 人
+                            <span data-i18n="drawing">本次抽取</span> <span id="draw-count">0</span> <span data-i18n="people">人</span>
                         </div>
                     </div>
-                    <div id="status-display">准备就绪</div>
-                    <button id="start-btn">开始抽奖</button>
+                    <div id="status-display" data-i18n="ready">准备就绪</div>
+                    <button id="start-btn" data-i18n="startLottery">开始抽奖</button>
                 </div>
 			</div>
             
             <div id="winners-panel">
-                <h3>中奖结果</h3>
+                <h3 data-i18n="lotteryResults">中奖结果</h3>
                 <div id="winners-container">
                     <!-- Results grouped by prize -->
                 </div>
-                <button id="clear-results-btn" class="secondary-btn small">清空结果</button>
+                <button id="clear-results-btn" class="secondary-btn small" data-i18n="clearResults">清空结果</button>
             </div>
 			
             <div id="modal-overlay">
                 <div id="result-modal">
-                    <div class="winner-title" id="modal-title">🎉 恭喜 🎉</div>
+                    <div class="winner-title" id="modal-title" data-i18n="congrats">🎉 恭喜 🎉</div>
                     <div id="modal-winners-list">
                         <!-- Winners shown here -->
                     </div>
                     <div id="current-highlight" class="highlight-name"></div>
-                    <button class="next-btn" id="next-btn">下一轮</button>
+                    <button class="next-btn" id="next-btn" data-i18n="nextRound">下一轮</button>
                 </div>
             </div>
 
@@ -677,8 +697,14 @@
                 <div id="system-modal">
                     <div class="modal-header">
                         <div class="modal-tabs">
-                            <button class="tab-btn active" data-tab="names">名单设置</button>
-                            <button class="tab-btn" data-tab="prizes">奖项配置</button>
+                            <button class="tab-btn active" data-tab="names" data-i18n="nameSettings">名单设置</button>
+                            <button class="tab-btn" data-tab="prizes" data-i18n="prizeSettings">奖项配置</button>
+                        </div>
+                        <div class="lang-switcher">
+                            <select id="lang-select" class="lang-select">
+                                <option value="zh">中文</option>
+                                <option value="en">English</option>
+                            </select>
                         </div>
                         <button class="close-modal-btn">&times;</button>
                     </div>
@@ -686,14 +712,14 @@
                         <!-- Names Tab -->
                         <div id="tab-names" class="tab-content active">
                             <div class="input-group">
-                                <label>候选名单（每行一个名字）</label>
+                                <label data-i18n="candidateList">候选名单（每行一个名字）</label>
                                 <textarea id="names-input" placeholder="请输入或粘贴姓名，每行一个..." rows="15"></textarea>
                             </div>
                             <div class="stats-bar" style="display: flex; justify-content: space-between; align-items: center; color: #888;">
-                                <span>已导入: <strong id="valid-count" style="color: #fff">0</strong> 人</span>
+                                <span><span data-i18n="imported">已导入:</span> <strong id="valid-count" style="color: #fff">0</strong> <span data-i18n="people">人</span></span>
                                 <div style="display: flex; gap: 10px;">
-                                    <button id="import-file-btn" class="dashed-btn">📂 导入文件</button>
-                                    <button id="save-names-btn" class="primary-btn">保存名单</button>
+                                    <button id="import-file-btn" class="dashed-btn" data-i18n="importFile">📂 导入文件</button>
+                                    <button id="save-names-btn" class="primary-btn" data-i18n="saveNames">保存名单</button>
                                 </div>
                             </div>
                         </div>
@@ -703,7 +729,7 @@
                             <div id="prize-list-config">
                                 <!-- Prize rows will be generated here -->
                             </div>
-                            <button id="add-prize-btn" class="dashed-btn" style="width: 100%; margin-top: 15px;">+ 添加新奖项</button>
+                            <button id="add-prize-btn" class="dashed-btn" style="width: 100%; margin-top: 15px;" data-i18n="addPrize">+ 添加新奖项</button>
                         </div>
                     </div>
                 </div>
@@ -716,6 +742,7 @@
             import { createPrize, validatePrizeList } from '../lib/prizeConfigState';
             import { drawWinners } from '../lib/drawEngine';
             import type { Prize } from '../lib/types';
+            import { translations, type Language } from '../lib/i18n';
 
 			const canvas = document.getElementById('lottery-canvas') as HTMLCanvasElement;
 			const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
@@ -727,6 +754,7 @@
             const closeModalBtn = document.querySelector('.close-modal-btn') as HTMLButtonElement;
             const tabBtns = document.querySelectorAll('.tab-btn');
             const tabContents = document.querySelectorAll('.tab-content');
+            const langSelect = document.getElementById('lang-select') as HTMLSelectElement;
 
             // Settings Elements (inside System Modal)
             const namesInput = document.getElementById('names-input') as HTMLTextAreaElement;
@@ -763,6 +791,56 @@
             ];
             let results: Record<string, string[]> = {};
             let currentPrizeId = prizes[0].id;
+
+            // I18n Logic
+            let currentLang: Language = (localStorage.getItem('lang') as Language) || 'zh';
+
+            function t(key: keyof typeof translations['zh'], params: Record<string, string | number> = {}) {
+                // @ts-ignore
+                let text = translations[currentLang][key] || key;
+                Object.entries(params).forEach(([k, v]) => {
+                    text = text.replace(`{${k}}`, String(v));
+                });
+                return text;
+            }
+
+            function updateLanguage(lang: Language) {
+                currentLang = lang;
+                localStorage.setItem('lang', lang);
+                
+                // Update simple elements
+                document.querySelectorAll('[data-i18n]').forEach(el => {
+                    const key = el.getAttribute('data-i18n') as keyof typeof translations['zh'];
+                    if (key && translations[lang][key]) {
+                        el.textContent = translations[lang][key];
+                    }
+                });
+
+                // Update inputs placeholders
+                if (namesInput) namesInput.placeholder = t('candidatePlaceholder');
+                
+                // Re-render prize config to update placeholders
+                renderPrizeConfigList();
+                
+                // Update status if idle
+                if (!isLotteryRunning && statusDisplay) {
+                    // Only reset if it's "Ready" or "Finished" (simple check)
+                    // Or just always reset to Ready if idle
+                    updateStatus(t('ready'));
+                }
+
+                // Update select dropdown options if needed (though prizes titles are data, not i18n keys)
+                // But we should update the static text around it
+            }
+
+            if (langSelect) {
+                langSelect.value = currentLang;
+                langSelect.addEventListener('change', (e) => {
+                    updateLanguage((e.target as HTMLSelectElement).value as Language);
+                });
+            }
+            // Initial call
+            updateLanguage(currentLang);
 
 			if (canvas) {
 				sphere = new LotterySphere(canvas, currentNamesList);
@@ -863,15 +941,15 @@
                 const newNames = processInput();
                 if (newNames.length === 0) return;
                 
-                if (confirm('保存名单将重置当前的抽奖状态，确定吗？')) {
+                if (confirm(t('saveResetConfirm'))) {
                     currentNamesList = newNames;
                     results = {};
                     renderResultsPanel();
                     sphere?.setNames(newNames);
                     
-                    updateStatus('名单已更新');
+                    updateStatus(t('listUpdated'));
                     // Optional: Close modal or just give feedback
-                    alert('名单已保存！');
+                    alert(t('listSaved'));
                 }
             });
 
@@ -905,8 +983,8 @@
                     const row = document.createElement('div');
                     row.className = 'prize-config-row';
                     row.innerHTML = `
-                        <input type="text" class="prize-title-input" value="${p.title}" placeholder="奖项名称">
-                        <input type="number" class="prize-count-input" value="${p.count}" min="1" placeholder="人数">
+                        <input type="text" class="prize-title-input" value="${p.title}" placeholder="${t('prizeName')}">
+                        <input type="number" class="prize-count-input" value="${p.count}" min="1" placeholder="${t('prizeCount')}">
                         <button class="delete-prize-btn" data-id="${p.id}">🗑️</button>
                     `;
                     
@@ -928,10 +1006,10 @@
                     
                     delBtn.addEventListener('click', () => {
                         if (prizes.length <= 1) {
-                            alert('至少保留一个奖项');
+                            alert(t('atLeastOnePrize'));
                             return;
                         }
-                        if (!confirm(`确定要删除奖项“${p.title}”吗？`)) return;
+                        if (!confirm(t('deletePrizeConfirm', { prize: p.title }))) return;
                         
                         prizes = prizes.filter(x => x.id !== p.id);
                         if (currentPrizeId === p.id) currentPrizeId = prizes[0].id;
@@ -944,7 +1022,7 @@
             }
 
             addPrizeBtn?.addEventListener('click', () => {
-                prizes.push(createPrize(`新奖项 ${prizes.length + 1}`, 1));
+                prizes.push(createPrize(`${t('newPrize')} ${prizes.length + 1}`, 1));
                 renderPrizeConfigList();
                 renderPrizeOptions();
             });
@@ -998,7 +1076,7 @@
             }
             
             clearResultsBtn?.addEventListener('click', () => {
-                if (confirm('确定要清空所有中奖记录并重置名单吗？')) {
+                if (confirm(t('confirmClear'))) {
                     results = {};
                     renderResultsPanel();
                     
@@ -1011,7 +1089,7 @@
                     }
                     
                     sphere?.setNames(currentNamesList);
-                    updateStatus('已重置');
+                    updateStatus(t('resetComplete'));
                     startBtn.disabled = false;
                 }
             });
@@ -1025,7 +1103,7 @@
                 // Check if we need to overwrite
                 const existingWinners = results[prize.id];
                 if (existingWinners && existingWinners.length > 0) {
-                    if (!confirm(`【${prize.title}】已经抽取过，再次抽取将覆盖原有结果。确定要重抽吗？`)) {
+                    if (!confirm(t('prizeOverwriteConfirm', { prize: prize.title }))) {
                         return;
                     }
                     
@@ -1041,7 +1119,7 @@
                 }
                 
                 if (currentNamesList.length < prize.count) {
-                    alert(`剩余人数不足！当前剩余 ${currentNamesList.length} 人，需要 ${prize.count} 人。`);
+                    alert(t('insufficientCandidates', { count: currentNamesList.length, needed: prize.count }));
                     return;
                 }
                 
@@ -1049,7 +1127,7 @@
                 startBtn.disabled = true;
                 systemConfigBtn.disabled = true;
                 prizeSelect.disabled = true;
-                updateStatus(`正在抽取 ${prize.title}...`);
+                updateStatus(t('drawingStatus', { prize: prize.title }));
                 
                 // 1. Start spinning
                 sphere?.spin();
@@ -1072,7 +1150,7 @@
                         () => {
                             // Finished
                             isLotteryRunning = false;
-                            updateStatus('抽奖完成');
+                            updateStatus(t('drawComplete'));
                             
                             // Commit results
                             currentNamesList = remainingCandidates;
@@ -1080,7 +1158,7 @@
                             
                             // Show modal
                             resultModalOverlay.classList.add('visible');
-                            if (modalTitle) modalTitle.textContent = `${prize.title} 结果`;
+                            if (modalTitle) modalTitle.textContent = t('prizeResult', { prize: prize.title });
                             if (modalWinnersList) {
                                 modalWinnersList.innerHTML = winners.map(w => `<span class="badge">${w}</span>`).join('');
                             }
@@ -1097,7 +1175,7 @@
 
             nextBtn?.addEventListener('click', () => {
                 resultModalOverlay.classList.remove('visible');
-                updateStatus('准备就绪');
+                updateStatus(t('ready'));
                 
                 startBtn.disabled = false;
                 systemConfigBtn.disabled = false;
