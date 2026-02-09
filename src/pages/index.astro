@@ -8,7 +8,7 @@
 		<link rel="icon" href="/favicon.ico" />
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
-		<title>Lottery Sphere</title>
+		<title>Pachinko Sphere</title>
 		<style>
 			body {
 				margin: 0;
@@ -650,6 +650,113 @@
                 background: #333;
                 color: white;
             }
+
+            /* Welcome Modal */
+            #welcome-modal-overlay {
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.9);
+                backdrop-filter: blur(10px);
+                z-index: 300;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                opacity: 0;
+                pointer-events: none;
+                transition: opacity 0.5s ease;
+            }
+            
+            #welcome-modal-overlay.visible {
+                opacity: 1;
+                pointer-events: auto;
+            }
+
+            #welcome-modal {
+                background: rgba(30, 30, 30, 0.6);
+                padding: 50px 60px;
+                border-radius: 24px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                text-align: center;
+                box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+                max-width: 90%;
+                width: 500px;
+                transform: translateY(20px);
+                transition: transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+            }
+
+            #welcome-modal-overlay.visible #welcome-modal {
+                transform: translateY(0);
+            }
+
+            .welcome-title {
+                font-size: 2rem;
+                margin: 0 0 10px 0;
+                background: linear-gradient(135deg, #fff, #aaa);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+
+            .welcome-subtitle {
+                color: #888;
+                margin-bottom: 40px;
+                font-size: 1.1rem;
+            }
+
+            .language-options {
+                display: flex;
+                gap: 20px;
+                justify-content: center;
+                margin-bottom: 30px;
+            }
+
+            .lang-option-btn {
+                flex: 1;
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                border-radius: 16px;
+                padding: 20px;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 8px;
+            }
+
+            .lang-option-btn:hover {
+                background: rgba(255, 255, 255, 0.1);
+                border-color: rgba(255, 255, 255, 0.3);
+                transform: translateY(-5px);
+                box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            }
+
+            .lang-option-btn.selected {
+                border-color: #ff3366;
+                background: rgba(255, 51, 102, 0.1);
+            }
+
+            .lang-name {
+                font-size: 1.5rem;
+                font-weight: bold;
+                color: #fff;
+            }
+
+            .lang-desc {
+                font-size: 0.9rem;
+                color: #aaa;
+            }
+
+            .welcome-note {
+                font-size: 0.9rem;
+                color: #666;
+                line-height: 1.6;
+                margin: 0;
+                padding-top: 20px;
+                border-top: 1px solid rgba(255, 255, 255, 0.05);
+            }
 		</style>
 	</head>
 	<body>
@@ -733,6 +840,28 @@
                             <button id="add-prize-btn" class="dashed-btn" style="width: 100%; margin-top: 15px;" data-i18n="addPrize">+ 添加新奖项</button>
                         </div>
                     </div>
+                </div>
+            </div>
+
+            <!-- Welcome / Language Selection Modal -->
+            <div id="welcome-modal-overlay">
+                <div id="welcome-modal">
+                    <h1 class="welcome-title">Welcome / 欢迎</h1>
+                    <p class="welcome-subtitle">Please select your language / 请选择语言</p>
+                    <div class="language-options">
+                        <button class="lang-option-btn" data-lang="zh">
+                            <span class="lang-name">中文</span>
+                            <span class="lang-desc">Chinese</span>
+                        </button>
+                        <button class="lang-option-btn" data-lang="en">
+                            <span class="lang-name">English</span>
+                            <span class="lang-desc">英语</span>
+                        </button>
+                    </div>
+                    <p class="welcome-note">
+                        You can change this later in settings.<br>
+                        稍后可以在设置中修改。
+                    </p>
                 </div>
             </div>
 		</div>
@@ -840,6 +969,38 @@
                     updateLanguage((e.target as HTMLSelectElement).value as Language);
                 });
             }
+
+            // --- Welcome Modal Logic ---
+            const welcomeModalOverlay = document.getElementById('welcome-modal-overlay');
+            const langOptionBtns = document.querySelectorAll('.lang-option-btn');
+
+            function checkFirstVisit() {
+                const visited = localStorage.getItem('visited');
+                if (!visited && welcomeModalOverlay) {
+                    welcomeModalOverlay.classList.add('visible');
+                }
+            }
+
+            langOptionBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const lang = (btn as HTMLElement).dataset.lang as Language;
+                    if (lang) {
+                        updateLanguage(lang);
+                        localStorage.setItem('visited', 'true');
+                        if (welcomeModalOverlay) {
+                            welcomeModalOverlay.classList.remove('visible');
+                        }
+                        
+                        // Sync with system modal selector
+                        if (langSelect) langSelect.value = lang;
+                    }
+                });
+            });
+
+            // Call checkFirstVisit on load
+            // We use setTimeout to ensure transition works and it feels like a proper entry
+            setTimeout(checkFirstVisit, 100);
+
             // Initial call
             updateLanguage(currentLang);
 
