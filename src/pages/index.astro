@@ -20,6 +20,7 @@
 			#sphere-container {
 				width: 100vw;
 				height: 100vh;
+                height: 100dvh;
 				position: relative;
 			}
 			canvas {
@@ -194,13 +195,16 @@
                 justify-content: center;
                 align-items: center;
                 opacity: 0;
+                visibility: hidden; /* Ensure hidden when not visible */
                 pointer-events: none;
-                transition: opacity 0.3s ease;
+                transition: opacity 0.3s ease, visibility 0s linear 0.3s;
             }
             
             #modal-overlay.visible {
                 opacity: 1;
+                visibility: visible;
                 pointer-events: auto;
+                transition: opacity 0.3s ease, visibility 0s linear 0s;
             }
 
 			#result-modal {
@@ -315,13 +319,16 @@
                 justify-content: center;
                 align-items: center;
                 opacity: 0;
+                visibility: hidden;
                 pointer-events: none;
-                transition: opacity 0.3s ease;
+                transition: opacity 0.3s ease, visibility 0s linear 0.3s;
             }
 
             #prize-modal-overlay.visible {
                 opacity: 1;
+                visibility: visible;
                 pointer-events: auto;
+                transition: opacity 0.3s ease, visibility 0s linear 0s;
             }
 
             #prize-modal {
@@ -476,12 +483,15 @@
                 justify-content: center;
                 align-items: center;
                 opacity: 0;
+                visibility: hidden;
                 pointer-events: none;
-                transition: opacity 0.3s ease;
+                transition: opacity 0.3s ease, visibility 0s linear 0.3s;
             }
             #system-modal-overlay.visible {
                 opacity: 1;
+                visibility: visible;
                 pointer-events: auto;
+                transition: opacity 0.3s ease, visibility 0s linear 0s;
             }
             #system-modal {
                 background: rgba(30, 30, 30, 0.8);
@@ -665,13 +675,16 @@
                 justify-content: center;
                 align-items: center;
                 opacity: 0;
+                visibility: hidden;
                 pointer-events: none;
-                transition: opacity 0.5s ease;
+                transition: opacity 0.5s ease, visibility 0s linear 0.5s;
             }
             
             #welcome-modal-overlay.visible {
                 opacity: 1;
+                visibility: visible;
                 pointer-events: auto;
+                transition: opacity 0.5s ease, visibility 0s linear 0s;
             }
 
             #welcome-modal {
@@ -756,6 +769,130 @@
                 margin: 0;
                 padding-top: 20px;
                 border-top: 1px solid rgba(255, 255, 255, 0.05);
+            }
+
+            /* Mobile Adaptation */
+            @media (max-width: 768px) {
+                /* Layout Adjustments */
+                #ui-layer {
+                    bottom: 30px;
+                    width: 90%;
+                    gap: 15px;
+                }
+                
+                .control-panel {
+                    width: 100%;
+                    padding: 15px 20px;
+                    box-sizing: border-box;
+                }
+
+                #top-bar {
+                    top: 15px;
+                    right: 15px;
+                }
+
+                #system-config-btn {
+                    padding: 8px 15px;
+                    font-size: 0.8rem;
+                }
+
+                /* Winners Panel Compact Mode */
+                #winners-panel {
+                    top: 60px;
+                    right: 15px;
+                    width: 140px;
+                    padding: 10px;
+                    max-height: 30vh;
+                }
+                
+                #winners-panel h3 {
+                    font-size: 0.9rem;
+                    margin-bottom: 8px;
+                }
+                
+                .winner-group h4 {
+                    font-size: 0.8rem;
+                }
+                
+                .winner-group-list {
+                    font-size: 0.8rem;
+                }
+
+                /* Modals Mobile Style */
+                #result-modal, 
+                #welcome-modal {
+                    padding: 30px 20px;
+                    width: 85%;
+                    max-height: 85vh;
+                    overflow-y: auto;
+                }
+
+                .winner-name {
+                    font-size: 2.5rem;
+                }
+
+                .highlight-name {
+                    font-size: 2rem;
+                    height: 3rem;
+                }
+
+                #system-modal {
+                    width: 95%;
+                    height: 80vh;
+                }
+
+                .modal-header {
+                    padding: 15px;
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+
+                .modal-tabs {
+                    gap: 10px;
+                }
+                
+                .lang-switcher {
+                    margin-left: 0;
+                    margin-right: 0;
+                }
+                
+                .modal-body {
+                    padding: 15px;
+                }
+
+                /* Buttons & Inputs */
+                button, .primary-btn, .dashed-btn {
+                    padding: 10px 20px;
+                    font-size: 1rem;
+                }
+
+                #start-btn {
+                    width: 100%;
+                    padding: 12px 0;
+                }
+
+                .language-options {
+                    flex-direction: column;
+                    gap: 10px;
+                }
+
+                .lang-option-btn {
+                    padding: 15px;
+                    flex-direction: row;
+                    justify-content: center;
+                }
+
+                .prize-config-row {
+                    gap: 8px;
+                }
+                
+                .prize-title-input {
+                    min-width: 0;
+                }
+                
+                .delete-prize-btn {
+                    padding: 8px;
+                }
             }
 		</style>
 	</head>
@@ -989,6 +1126,10 @@
                         localStorage.setItem('visited', 'true');
                         if (welcomeModalOverlay) {
                             welcomeModalOverlay.classList.remove('visible');
+                            // Remove from DOM after transition
+                            setTimeout(() => {
+                                welcomeModalOverlay.remove();
+                            }, 500); // 500ms matches CSS transition
                         }
                         
                         // Sync with system modal selector
