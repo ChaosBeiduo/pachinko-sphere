@@ -1,4 +1,6 @@
-# Lottery Sphere
+# Pachinko Sphere
+
+[Preview](https://pachinko-sphere.vercel.app/)
 
 A 3D lottery drawing application built with Astro and Three.js. Features a beautiful "sphere of names" that spins and selects winners with smooth animations.
 
