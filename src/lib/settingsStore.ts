@@ -3,10 +3,10 @@ import type { SphereSettings } from './types';
 const SETTINGS_KEY = 'appSettings.v1';
 
 export const DEFAULT_SETTINGS: SphereSettings = {
-  rotationSpeed: 0.5, // rad/s
+  rotationSpeed: 0.2, // rad/s
   spinTurns: 5,
   spinDuration: 5,    // s
-  extraRevs: 12,
+  extraRevs: 6,
 };
 
 type SettingsListener = (settings: SphereSettings) => void;

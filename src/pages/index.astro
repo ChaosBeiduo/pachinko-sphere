@@ -1389,7 +1389,7 @@ import '../styles/global.scss'
                     });
                     syncWithStore();
                     updateStatus(t('listUpdated'));
-                    modalManager.alert(t('listSaved'));
+                    modalManager.toast(t('listSaved'));
                 }
             });
 
@@ -1638,6 +1638,7 @@ import '../styles/global.scss'
                 if (confirmed) {
                     store.resetFree();
                     syncWithStore();
+                    modalManager.toast(t('resetComplete'));
                 }
             });
 
@@ -1646,11 +1647,13 @@ import '../styles/global.scss'
                 if (confirmed) {
                     if (store.getState().mode === 'free') {
                         store.clearFreeResults();
+                        modalManager.toast(t('resetComplete'));
                     } else {
                         store.clearResults();
+                        modalManager.toast(t('resetComplete'));
                     }
                     syncWithStore();
-                    updateStatus(t('resetComplete'));
+                    updateStatus(t('ready'));
                 }
             });
 
