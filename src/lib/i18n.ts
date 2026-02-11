@@ -39,7 +39,15 @@ export const translations = {
     spinTurns: "抽奖旋转圈数 (圈)",
     spinDuration: "抽奖持续时间 (秒)",
     extraRevs: "停止前额外旋转 (圈)",
-    restoreDefault: "恢复默认"
+    restoreDefault: "恢复默认",
+    appMode: "抽奖模式",
+    prizeMode: "奖项模式",
+    freeMode: "自由模式",
+    modeSwitchConfirm: "当前有抽奖正在进行或结果待确认，切换模式将重置当前状态，是否继续？",
+    resetRound: "重置本轮",
+    undoLast: "撤销上一个",
+    drawCount: "已抽人数: {count}",
+    noFreeResults: "暂无抽奖结果"
   },
   en: {
     systemConfig: "⚙️ Settings",
@@ -62,8 +70,8 @@ export const translations = {
     addPrize: "+ Add Prize",
     prizeName: "Prize Name",
     prizeCount: "Count",
-    deletePrizeConfirm: "Delete prize \"{prize}\"?",
     atLeastOnePrize: "Keep at least one prize",
+    deletePrizeConfirm: "Delete prize \"{prize}\"?",
     confirmClear: "Are you sure you want to clear all results and reset the list?",
     resetComplete: "Reset Complete",
     insufficientCandidates: "Not enough candidates! Left: {count}, Needed: {needed}.",
@@ -81,7 +89,15 @@ export const translations = {
     spinTurns: "Spin Turns",
     spinDuration: "Spin Duration (s)",
     extraRevs: "Extra Rounds (Alignment)",
-    restoreDefault: "Restore Defaults"
+    restoreDefault: "Restore Defaults",
+    appMode: "Draw Mode",
+    prizeMode: "Prize Mode",
+    freeMode: "Free Mode",
+    modeSwitchConfirm: "A draw is in progress or results are pending. Switching modes will reset the current state. Continue?",
+    resetRound: "Reset Round",
+    undoLast: "Undo Last",
+    drawCount: "Drawn: {count}",
+    noFreeResults: "No results yet"
   }
 };
 

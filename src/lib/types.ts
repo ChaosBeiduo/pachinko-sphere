@@ -11,11 +11,15 @@ export interface DrawResult {
 }
 
 export type Language = 'zh' | 'en';
+export type AppMode = 'prize' | 'free';
 
 export interface AppState {
+  mode: AppMode;
   candidates: string[];
   prizes: Prize[];
   results: Record<string, string[]>; // prizeId -> winnerNames[]
+  freeResults: string[];             // 自由模式结果
+  freeInitialCandidates: string[];   // 自由模式重置参考
   currentPrizeId: string;
   language: Language;
   isDrawing: boolean;

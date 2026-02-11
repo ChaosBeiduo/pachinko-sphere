@@ -42,12 +42,20 @@ export class LotteryManager {
 
   /**
    * Starts the lottery draw process
-   * Includes validation, animation coordination, and state commitment
    */
   async startDraw() {
     const state = store.getState();
     if (state.isDrawing) return;
 
+    if (state.mode === 'prize') {
+      await this.drawPrize();
+    } else {
+      await this.drawFree();
+    }
+  }
+
+  private async drawPrize() {
+    const state = store.getState();
     const prize = state.prizes.find(p => p.id === state.currentPrizeId);
     if (!prize) return;
 
@@ -67,7 +75,6 @@ export class LotteryManager {
         results: newResults
       });
       
-      // Update sphere with rolled-back candidates
       this.sphere?.setNames(newCandidates);
     }
 
@@ -80,11 +87,9 @@ export class LotteryManager {
       return;
     }
 
-    // 2. Prepare for drawing
     store.setDrawing(true);
     this.onDrawStart?.(prize.title);
 
-    // 3. Coordination: Start Animation with dynamic settings
     const settings = settingsStore.getSettings();
     const plan = computeSpinPlan({
       duration: settings.spinDuration,
@@ -93,40 +98,66 @@ export class LotteryManager {
     });
     this.sphere?.spin(plan);
 
-    // 4. Logic: Calculate winners immediately (fairness is preserved as they are hidden)
     const { winners, remainingCandidates } = drawWinners(currentState.candidates, prize.count);
 
-    // 5. Animation Timing: Stop and highlight winners after a suspenseful delay
-    const DRAW_DELAY = settings.spinDuration * 1000 * 0.6; // Stop after 60% of total duration (accel + constant)
+    const DRAW_DELAY = settings.spinDuration * 1000 * 0.6;
     
     setTimeout(() => {
       this.sphere?.stopAndHighlightWinners(
         winners,
-        (name) => {
-          this.onWinnerHighlight?.(name);
-        },
+        (name) => this.onWinnerHighlight?.(name),
         () => {
-          // 6. Completion: Update store and notify UI
           store.setDrawing(false);
-
-          // Commit winners to store results
-          const currentStoreState = store.getState();
-          const finalResults = { ...currentStoreState.results, [prize.id]: winners };
-          
-          store.setState({
-            candidates: remainingCandidates,
-            results: finalResults
-          });
-
-          // Finalize UI
+          store.addResults(prize.id, winners);
+          store.removeCandidates(winners);
           this.onDrawComplete?.(prize.title, winners);
-          
-          // Sync sphere with remaining candidates for next round
-          this.sphere?.setNames(remainingCandidates);
+          this.sphere?.setNames(store.getState().candidates);
         },
-        {
-          extraRevs: settings.extraRevs
-        }
+        { extraRevs: settings.extraRevs }
+      );
+    }, DRAW_DELAY);
+  }
+
+  private async drawFree() {
+    const state = store.getState();
+    if (state.candidates.length === 0) {
+      modalManager.alert(this.t('insufficientCandidates', { count: 0, needed: 1 }));
+      return;
+    }
+
+    store.setDrawing(true);
+    this.onDrawStart?.('');
+
+    const settings = settingsStore.getSettings();
+    const plan = computeSpinPlan({
+      duration: settings.spinDuration,
+      turns: settings.spinTurns,
+      baseSpeed: settings.rotationSpeed
+    });
+    this.sphere?.spin(plan);
+
+    const { winners } = drawWinners(state.candidates, 1);
+    
+    // Runtime assertion: Ensure picked winner was actually in candidates and only one winner
+    if (winners.length !== 1 || !state.candidates.includes(winners[0])) {
+      console.error('Free mode draw error: invalid winner', { winners, candidates: state.candidates });
+      store.setDrawing(false);
+      return;
+    }
+
+    const DRAW_DELAY = settings.spinDuration * 1000 * 0.6;
+    
+    setTimeout(() => {
+      this.sphere?.stopAndHighlightWinners(
+        winners,
+        (name) => this.onWinnerHighlight?.(name),
+        () => {
+          store.setDrawing(false);
+          store.addFreeResult(winners[0]);
+          this.onDrawComplete?.('', winners);
+          this.sphere?.setNames(store.getState().candidates);
+        },
+        { extraRevs: settings.extraRevs }
       );
     }, DRAW_DELAY);
   }

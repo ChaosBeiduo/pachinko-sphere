@@ -1,4 +1,4 @@
-import type { AppState, Prize, Language } from './types';
+import type { AppState, Prize, Language, AppMode } from './types';
 import names from '../data/name';
 import { createPrize } from './prizeConfigState';
 
@@ -13,7 +13,12 @@ class Store {
     const saved = typeof localStorage !== 'undefined' ? localStorage.getItem('pachinko_state') : null;
     if (saved) {
       try {
-        this.state = JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Data migration/fix for new fields
+        this.state = {
+          ...this.getInitialState(),
+          ...parsed
+        };
       } catch (e) {
         this.state = this.getInitialState();
       }
@@ -29,9 +34,12 @@ class Store {
       createPrize('三等奖', 5)
     ];
     return {
+      mode: 'prize',
       candidates: [...names],
       prizes: defaultPrizes,
       results: {},
+      freeResults: [],
+      freeInitialCandidates: [...names],
       currentPrizeId: defaultPrizes[0].id,
       language: (typeof localStorage !== 'undefined' ? localStorage.getItem('lang') as Language : 'zh') || 'zh',
       isDrawing: false
@@ -87,6 +95,63 @@ class Store {
 
   setDrawing(isDrawing: boolean) {
     this.setState({ isDrawing });
+  }
+
+  setMode(mode: AppMode) {
+    const updates: Partial<AppState> = { mode };
+    // If entering free mode, take a snapshot of current candidates
+    if (mode === 'free') {
+      updates.freeInitialCandidates = [...this.state.candidates];
+    }
+    this.setState(updates);
+  }
+
+  addFreeResult(name: string) {
+    this.setState({
+      freeResults: [name, ...this.state.freeResults],
+      candidates: this.state.candidates.filter(n => n !== name)
+    });
+  }
+
+  undoFree() {
+    if (this.state.freeResults.length === 0) return;
+    const [last, ...rest] = this.state.freeResults;
+    this.setState({
+      freeResults: rest,
+      candidates: [last, ...this.state.candidates]
+    });
+  }
+
+  resetFree() {
+    this.setState({
+      candidates: [...this.state.freeInitialCandidates],
+      freeResults: []
+    });
+  }
+
+  clearFreeResults() {
+    this.setState({ freeResults: [] });
+  }
+
+  addResults(prizeId: string, names: string[]) {
+    const currentResults = { ...this.state.results };
+    currentResults[prizeId] = [...(currentResults[prizeId] || []), ...names];
+    this.setState({ results: currentResults });
+  }
+
+  removeCandidates(names: string[]) {
+    this.setState({
+      candidates: this.state.candidates.filter(n => !names.includes(n))
+    });
+  }
+
+  clearResults() {
+    const currentResults = this.state.results;
+    const allWinners = Object.values(currentResults).flat();
+    this.setState({
+      results: {},
+      candidates: [...this.state.candidates, ...allWinners]
+    });
   }
 
   reset() {

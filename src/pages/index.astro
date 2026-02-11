@@ -83,6 +83,45 @@ import '../styles/global.scss'
                 font-weight: bold;
                 font-size: 1.1rem;
             }
+
+            .free-selector {
+                display: flex;
+                flex-direction: column;
+                align-items: center;
+                gap: 10px;
+                margin-bottom: 10px;
+            }
+
+            .free-info {
+                font-size: 1rem;
+                color: #ff3366;
+                font-weight: bold;
+            }
+
+            .free-actions {
+                display: flex;
+                gap: 10px;
+            }
+
+            .dashed-btn.sm {
+                padding: 4px 10px;
+                font-size: 0.8rem;
+            }
+
+            .empty-results {
+                color: rgba(255, 255, 255, 0.4);
+                text-align: center;
+                padding: 20px 0;
+                font-style: italic;
+            }
+
+            .winner-group-list.free-results-list {
+                display: flex;
+                flex-wrap: wrap;
+                gap: 8px;
+                justify-content: flex-start;
+                line-height: 1.6;
+            }
 			
 			#status-display {
 				font-size: 1.5rem;
@@ -370,8 +409,42 @@ import '../styles/global.scss'
             #top-bar {
                 position: absolute;
                 top: 20px;
+                left: 20px;
                 right: 20px;
-                z-index: 20;
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                z-index: 100;
+            }
+
+            #mode-toggle-container {
+                display: flex;
+                background: rgba(0, 0, 0, 0.3);
+                backdrop-filter: blur(10px);
+                padding: 4px;
+                border-radius: 12px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+            }
+
+            .mode-btn {
+                padding: 6px 16px;
+                border-radius: 8px;
+                border: none;
+                background: transparent;
+                color: rgba(255, 255, 255, 0.6);
+                cursor: pointer;
+                font-size: 0.9rem;
+                transition: all 0.3s;
+            }
+
+            .mode-btn.active {
+                background: rgba(255, 255, 255, 0.15);
+                color: white;
+                box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+            }
+
+            .mode-btn:hover:not(.active) {
+                color: white;
             }
 
             #system-config-btn {
@@ -823,13 +896,17 @@ import '../styles/global.scss'
 	<body>
 		<div id="sphere-container">
             <div id="top-bar">
+                <div id="mode-toggle-container">
+                    <button id="mode-prize" class="mode-btn active" data-mode="prize" data-i18n="prizeMode">奖项模式</button>
+                    <button id="mode-free" class="mode-btn" data-mode="free" data-i18n="freeMode">自由模式</button>
+                </div>
                 <button id="system-config-btn" data-i18n="systemConfig">⚙️ 系统配置</button>
             </div>
 			<canvas id="lottery-canvas"></canvas>
 			
 			<div id="ui-layer">
                 <div class="control-panel">
-                    <div class="prize-selector">
+                    <div id="prize-mode-controls" class="prize-selector">
                         <select id="prize-select">
                             <!-- Prizes will be populated here -->
                         </select>
@@ -837,6 +914,17 @@ import '../styles/global.scss'
                             <span data-i18n="drawing">本次抽取</span> <span id="draw-count">0</span> <span data-i18n="people">人</span>
                         </div>
                     </div>
+                    
+                    <div id="free-mode-controls" class="free-selector" style="display: none;">
+                        <div class="free-info">
+                            <span id="free-draw-count-label" data-i18n="drawCount">已抽人数: 0</span>
+                        </div>
+                        <div class="free-actions">
+                            <button id="undo-btn" class="dashed-btn sm" data-i18n="undoLast">撤销上一个</button>
+                            <button id="reset-free-btn" class="dashed-btn sm" data-i18n="resetRound">重置本轮</button>
+                        </div>
+                    </div>
+
                     <div id="status-display" data-i18n="ready">准备就绪</div>
                     <button id="start-btn" data-i18n="startLottery">开始抽奖</button>
                 </div>
@@ -1053,6 +1141,14 @@ import '../styles/global.scss'
             const winnersContainer = document.getElementById('winners-container') as HTMLDivElement;
             const clearResultsBtn = document.getElementById('clear-results-btn') as HTMLButtonElement;
 
+            // Mode Switching Elements
+            const modeBtns = document.querySelectorAll('.mode-btn');
+            const prizeModeControls = document.getElementById('prize-mode-controls');
+            const freeModeControls = document.getElementById('free-mode-controls');
+            const freeDrawCountLabel = document.getElementById('free-draw-count-label');
+            const undoBtn = document.getElementById('undo-btn');
+            const resetFreeBtn = document.getElementById('reset-free-btn');
+
 			// Result Modal Elements
             const resultModalOverlay = document.getElementById('modal-overlay') as HTMLDivElement;
             const modalTitle = document.getElementById('modal-title') as HTMLDivElement;
@@ -1150,6 +1246,20 @@ import '../styles/global.scss'
                 startBtn.disabled = state.isDrawing;
                 systemConfigBtn.disabled = state.isDrawing;
                 prizeSelect.disabled = state.isDrawing;
+
+                // Update Mode UI
+                modeBtns.forEach(btn => {
+                    const mode = (btn as HTMLElement).dataset.mode;
+                    btn.classList.toggle('active', mode === state.mode);
+                    (btn as HTMLButtonElement).disabled = state.isDrawing;
+                });
+
+                if (prizeModeControls) prizeModeControls.style.display = state.mode === 'prize' ? 'flex' : 'none';
+                if (freeModeControls) freeModeControls.style.display = state.mode === 'free' ? 'flex' : 'none';
+                
+                if (freeDrawCountLabel) {
+                    freeDrawCountLabel.textContent = t('drawCount', { count: state.freeResults.length });
+                }
             }
 
             if (langSelect) {
@@ -1455,27 +1565,90 @@ import '../styles/global.scss'
                 winnersContainer.innerHTML = '';
                 const state = store.getState();
                 
-                state.prizes.forEach(p => {
-                    const winners = state.results[p.id] || [];
-                    if (winners.length === 0) return;
-                    
+                if (state.mode === 'prize') {
+                    state.prizes.forEach(p => {
+                        const winners = state.results[p.id] || [];
+                        if (winners.length === 0) return;
+                        
+                        const group = document.createElement('div');
+                        group.className = 'winner-group';
+                        group.innerHTML = `<h4>${p.title}</h4>`;
+                        
+                        const list = document.createElement('div');
+                        group.appendChild(list);
+                        list.className = 'winner-group-list';
+                        list.textContent = winners.join('、');
+                        
+                        winnersContainer.appendChild(group);
+                    });
+                } else {
+                    if (state.freeResults.length === 0) {
+                        const empty = document.createElement('div');
+                        empty.className = 'empty-results';
+                        empty.textContent = t('noFreeResults');
+                        winnersContainer.appendChild(empty);
+                        return;
+                    }
+
                     const group = document.createElement('div');
                     group.className = 'winner-group';
-                    group.innerHTML = `<h4>${p.title}</h4>`;
+                    group.innerHTML = `<h4 data-i18n="freeMode">${t('freeMode')}</h4>`;
                     
                     const list = document.createElement('div');
                     group.appendChild(list);
-                    list.className = 'winner-group-list';
-                    list.textContent = winners.join('、');
+                    list.className = 'winner-group-list free-results-list';
+                    // List names in reverse chronological order
+                    list.textContent = state.freeResults.join('、');
                     
                     winnersContainer.appendChild(group);
-                });
+                }
             }
             
+            // --- Mode Switch Logic ---
+            modeBtns.forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    const state = store.getState();
+                    const targetMode = (btn as HTMLElement).dataset.mode as any;
+                    if (state.mode === targetMode) return;
+
+                    // Confirmation if drawing or result shown
+                    const isResultVisible = resultModalOverlay.classList.contains('visible');
+                    if (state.isDrawing || isResultVisible) {
+                        const confirmed = await modalManager.confirm(t('modeSwitchConfirm'));
+                        if (!confirmed) return;
+                        
+                        if (isResultVisible) {
+                            resultModalOverlay.classList.remove('visible');
+                        }
+                    }
+
+                    store.setMode(targetMode);
+                    syncWithStore();
+                });
+            });
+
+            // --- Free Mode Actions ---
+            undoBtn?.addEventListener('click', () => {
+                store.undoFree();
+                syncWithStore();
+            });
+
+            resetFreeBtn?.addEventListener('click', async () => {
+                const confirmed = await modalManager.confirm(t('confirmClear')); // Reuse clear confirm
+                if (confirmed) {
+                    store.resetFree();
+                    syncWithStore();
+                }
+            });
+
             clearResultsBtn?.addEventListener('click', async () => {
                 const confirmed = await modalManager.confirm(t('confirmClear'));
                 if (confirmed) {
-                    store.reset();
+                    if (store.getState().mode === 'free') {
+                        store.clearFreeResults();
+                    } else {
+                        store.clearResults();
+                    }
                     syncWithStore();
                     updateStatus(t('resetComplete'));
                 }
