@@ -2,6 +2,8 @@ import { store } from './store';
 import { drawWinners } from './drawEngine';
 import { modalManager } from './modalManager';
 import { translations } from './i18n';
+import { settingsStore } from './settingsStore';
+import { computeSpinPlan } from './spinMath';
 import type { LotterySphere } from '../components/LotterySphere';
 
 export interface LotteryManagerOptions {
@@ -82,14 +84,20 @@ export class LotteryManager {
     store.setDrawing(true);
     this.onDrawStart?.(prize.title);
 
-    // 3. Coordination: Start Animation
-    this.sphere?.spin();
+    // 3. Coordination: Start Animation with dynamic settings
+    const settings = settingsStore.getSettings();
+    const plan = computeSpinPlan({
+      duration: settings.spinDuration,
+      turns: settings.spinTurns,
+      baseSpeed: settings.rotationSpeed
+    });
+    this.sphere?.spin(plan);
 
     // 4. Logic: Calculate winners immediately (fairness is preserved as they are hidden)
     const { winners, remainingCandidates } = drawWinners(currentState.candidates, prize.count);
 
     // 5. Animation Timing: Stop and highlight winners after a suspenseful delay
-    const DRAW_DELAY = 3000; 
+    const DRAW_DELAY = settings.spinDuration * 1000 * 0.6; // Stop after 60% of total duration (accel + constant)
     
     setTimeout(() => {
       this.sphere?.stopAndHighlightWinners(
@@ -115,6 +123,9 @@ export class LotteryManager {
           
           // Sync sphere with remaining candidates for next round
           this.sphere?.setNames(remainingCandidates);
+        },
+        {
+          extraRevs: settings.extraRevs
         }
       );
     }, DRAW_DELAY);

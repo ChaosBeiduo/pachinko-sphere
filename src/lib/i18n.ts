@@ -33,7 +33,13 @@ export const translations = {
     prizeOverwriteConfirm: "【{prize}】已经抽取过，再次抽取将覆盖原有结果。确定要重抽吗？",
     language: "语言 / Language",
     prizeResult: "{prize} 结果",
-    newPrize: "新奖项"
+    newPrize: "新奖项",
+    animationSettings: "动画设置",
+    rotationSpeed: "基础旋转速度 (rad/s)",
+    spinTurns: "抽奖旋转圈数 (圈)",
+    spinDuration: "抽奖持续时间 (秒)",
+    extraRevs: "停止前额外旋转 (圈)",
+    restoreDefault: "恢复默认"
   },
   en: {
     systemConfig: "⚙️ Settings",
@@ -69,7 +75,13 @@ export const translations = {
     prizeOverwriteConfirm: "\"{prize}\" has been drawn. Redrawing will overwrite results. Continue?",
     language: "Language / 语言",
     prizeResult: "{prize} Results",
-    newPrize: "New Prize"
+    newPrize: "New Prize",
+    animationSettings: "Animation",
+    rotationSpeed: "Rotation Speed (rad/s)",
+    spinTurns: "Spin Turns",
+    spinDuration: "Spin Duration (s)",
+    extraRevs: "Extra Rounds (Alignment)",
+    restoreDefault: "Restore Defaults"
   }
 };
 

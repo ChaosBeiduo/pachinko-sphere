@@ -868,6 +868,7 @@ import '../styles/global.scss'
                         <div class="modal-tabs">
                             <button class="tab-btn active" data-tab="names" data-i18n="nameSettings">名单设置</button>
                             <button class="tab-btn" data-tab="prizes" data-i18n="prizeSettings">奖项配置</button>
+                            <button class="tab-btn" data-tab="animation" data-i18n="animationSettings">动画设置</button>
                         </div>
                         <div class="lang-switcher">
                             <select id="lang-select" class="lang-select">
@@ -899,6 +900,82 @@ import '../styles/global.scss'
                                 <!-- Prize rows will be generated here -->
                             </div>
                             <button id="add-prize-btn" class="dashed-btn" style="width: 100%; margin-top: 15px;" data-i18n="addPrize">+ 添加新奖项</button>
+                        </div>
+
+                        <!-- Animation Tab -->
+                        <div id="tab-animation" class="tab-content">
+                            <style>
+                                .settings-row {
+                                    display: flex;
+                                    flex-direction: column;
+                                    gap: 10px;
+                                    margin-bottom: 25px;
+                                    background: rgba(255, 255, 255, 0.03);
+                                    padding: 15px;
+                                    border-radius: 8px;
+                                }
+                                .settings-row-header {
+                                    display: flex;
+                                    justify-content: space-between;
+                                    align-items: center;
+                                }
+                                .settings-row-header label {
+                                    margin-bottom: 0;
+                                }
+                                .settings-input-container {
+                                    display: flex;
+                                    align-items: center;
+                                    gap: 15px;
+                                }
+                                .settings-slider {
+                                    flex: 1;
+                                    accent-color: #ff3366;
+                                }
+                                .settings-num-input {
+                                    width: 80px !important;
+                                    text-align: center;
+                                }
+                            </style>
+                            
+                            <div class="settings-row">
+                                <div class="settings-row-header">
+                                    <label data-i18n="rotationSpeed">基础旋转速度 (rad/s)</label>
+                                </div>
+                                <div class="settings-input-container">
+                                    <input type="range" id="speed-slider" class="settings-slider" min="0.1" max="5" step="0.1">
+                                    <input type="number" id="speed-input" class="settings-num-input" min="0.1" max="5" step="0.1">
+                                </div>
+                            </div>
+
+                            <div class="settings-row">
+                                <div class="settings-row-header">
+                                    <label data-i18n="spinTurns">抽奖旋转圈数</label>
+                                </div>
+                                <div class="settings-input-container">
+                                    <input type="range" id="turns-slider" class="settings-slider" min="1" max="50" step="1">
+                                    <input type="number" id="turns-input" class="settings-num-input" min="1" max="50" step="1">
+                                </div>
+                            </div>
+
+                            <div class="settings-row">
+                                <div class="settings-row-header">
+                                    <label data-i18n="spinDuration">抽奖持续时间 (秒)</label>
+                                </div>
+                                <div class="settings-input-container">
+                            <input type="range" id="duration-slider" class="settings-slider" min="1" max="30" step="1">
+                            <input type="number" id="duration-input" class="settings-num-input" min="1" max="30" step="1">
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div class="settings-row-header">
+                            <label data-i18n="extraRevs">停止前额外旋转 (圈)</label>
+                        </div>
+                        <div class="settings-input-container">
+                            <input type="range" id="extra-revs-slider" class="settings-slider" min="0" max="100" step="1">
+                            <input type="number" id="extra-revs-input" class="settings-num-input" min="0" max="100" step="1">
+                        </div>
+                    </div>
+                    <button id="restore-defaults-btn" class="dashed-btn" style="width: 100%; margin-top: 10px;" data-i18n="restoreDefault">恢复默认</button>
                         </div>
                     </div>
                 </div>
@@ -934,6 +1011,8 @@ import '../styles/global.scss'
             import { translations, type Language } from '../lib/i18n';
             import { createPrize } from '../lib/prizeConfigState';
             import { LotteryManager } from '../lib/lotteryManager';
+            import { settingsStore } from '../lib/settingsStore';
+            import type { SphereSettings } from '../lib/types';
 
 			const canvas = document.getElementById('lottery-canvas') as HTMLCanvasElement;
 			const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
@@ -956,6 +1035,17 @@ import '../styles/global.scss'
             // Prize Config Elements (inside System Modal)
             const prizeListConfigEl = document.getElementById('prize-list-config') as HTMLDivElement;
             const addPrizeBtn = document.getElementById('add-prize-btn') as HTMLButtonElement;
+
+            // Animation Settings Elements
+            const speedSlider = document.getElementById('speed-slider') as HTMLInputElement;
+            const speedInput = document.getElementById('speed-input') as HTMLInputElement;
+            const turnsSlider = document.getElementById('turns-slider') as HTMLInputElement;
+            const turnsInput = document.getElementById('turns-input') as HTMLInputElement;
+            const durationSlider = document.getElementById('duration-slider') as HTMLInputElement;
+            const durationInput = document.getElementById('duration-input') as HTMLInputElement;
+            const extraRevsSlider = document.getElementById('extra-revs-slider') as HTMLInputElement;
+            const extraRevsInput = document.getElementById('extra-revs-input') as HTMLInputElement;
+            const restoreDefaultsBtn = document.getElementById('restore-defaults-btn') as HTMLButtonElement;
 
             // Main UI Elements
             const prizeSelect = document.getElementById('prize-select') as HTMLSelectElement;
@@ -1048,6 +1138,7 @@ import '../styles/global.scss'
                 renderResultsPanel();
                 updateCurrentPrizeInfo();
                 updateLanguage(state.language);
+                updateAnimationSettingsUI();
                 
                 // Update Name Input if empty
                 if (namesInput && !namesInput.value && state.candidates.length > 0) {
@@ -1281,6 +1372,56 @@ import '../styles/global.scss'
                 renderPrizeOptions();
             });
 
+            // --- Animation Settings Logic ---
+            function updateAnimationSettingsUI() {
+                const settings = settingsStore.getSettings();
+                
+                if (speedSlider) speedSlider.value = settings.rotationSpeed.toString();
+                if (speedInput) speedInput.value = settings.rotationSpeed.toString();
+                
+                if (turnsSlider) turnsSlider.value = settings.spinTurns.toString();
+                if (turnsInput) turnsInput.value = settings.spinTurns.toString();
+                
+                if (durationSlider) durationSlider.value = settings.spinDuration.toString();
+                if (durationInput) durationInput.value = settings.spinDuration.toString();
+                
+                if (extraRevsSlider) extraRevsSlider.value = settings.extraRevs.toString();
+                if (extraRevsInput) extraRevsInput.value = settings.extraRevs.toString();
+                
+                // Update sphere if initialized
+                if (sphere) {
+                    sphere.setBaseSpeed(settings.rotationSpeed);
+                }
+            }
+
+            function setupAnimationSettingsListeners() {
+                const bindPair = (slider: HTMLInputElement, input: HTMLInputElement, key: keyof SphereSettings) => {
+                    const update = (val: number) => {
+                        settingsStore.updateSettings({ [key]: val });
+                        updateAnimationSettingsUI();
+                    };
+
+                    slider?.addEventListener('input', (e) => {
+                        update(parseFloat((e.target as HTMLInputElement).value));
+                    });
+
+                    input?.addEventListener('change', (e) => {
+                        let val = parseFloat((e.target as HTMLInputElement).value);
+                        update(val);
+                    });
+                };
+
+                bindPair(speedSlider, speedInput, 'rotationSpeed');
+                bindPair(turnsSlider, turnsInput, 'spinTurns');
+                bindPair(durationSlider, durationInput, 'spinDuration');
+                bindPair(extraRevsSlider, extraRevsInput, 'extraRevs');
+
+                restoreDefaultsBtn?.addEventListener('click', () => {
+                    settingsStore.resetToDefault();
+                    updateAnimationSettingsUI();
+                });
+            }
+
             // --- Main Lottery Logic ---
             function renderPrizeOptions() {
                 if (!prizeSelect) return;
@@ -1350,6 +1491,7 @@ import '../styles/global.scss'
             });
 
             // Init
+            setupAnimationSettingsListeners();
             syncWithStore();
 		</script>
 	</body>

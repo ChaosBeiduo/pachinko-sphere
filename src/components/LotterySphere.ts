@@ -1,6 +1,18 @@
 import * as THREE from 'three';
+import { type SpinPlan } from '../lib/spinMath';
 
 type AnimationState = 'idle' | 'accelerating' | 'constant' | 'decelerating' | 'highlighting';
+
+type StopConfig = {
+  // 第一个中奖者“停下时”的额外圈数（平行旋转圈数）
+  extraRevs?: number;
+  // 停下对齐耗时
+  durationMs?: number;
+  // 切到下一个中奖者时的额外圈数/耗时（通常更小）
+  nextExtraRevs?: number;
+  nextDurationMs?: number;
+};
+
 
 export class LotterySphere {
   private scene: THREE.Scene;
@@ -19,17 +31,22 @@ export class LotterySphere {
   private currentWinnerIndex: number = 0;
   private onWinnerHighlight: ((name: string) => void) | null = null;
   private onAllFinished: (() => void) | null = null;
+
+  private stopConfig: StopConfig = {};
   
   // Animation Parameters
   private baseSpeed = { x: 0.001, y: 0.002 };
-  private maxSpeed = { x: 0.05, y: 0.1 };
   private currentSpeed = { x: 0.001, y: 0.002 };
   
+  // Dynamic Animation Config
+  private spinPlan: SpinPlan | null = null;
+  private maxSpeedY: number = 0.1;
+
   // Deceleration & Alignment control
   private startQuaternion = new THREE.Quaternion();
   private endQuaternion = new THREE.Quaternion();
   private extraRotationAxis = new THREE.Vector3(0, 1, 0);
-  private extraRotationRevs = 24; // Extra revolutions during deceleration
+  private extraRotationRevs = 6; // Extra revolutions during deceleration
   private decelerationDuration = 10000;
 
   // Texture Cache
@@ -162,18 +179,27 @@ export class LotterySphere {
     this.renderer.setSize(width, height);
   }
 
+  public setBaseSpeed(speedRadS: number) {
+    // Convert rad/s to rad/frame (approx 60fps)
+    const perFrame = speedRadS / 60;
+    this.baseSpeed.y = perFrame;
+    this.baseSpeed.x = perFrame * 0.5;
+  }
+
   // New API: Start spinning
-  public spin() {
+  public spin(plan?: SpinPlan) {
     if (this.names.length === 0) return;
+    this.spinPlan = plan || null;
     this.state = 'accelerating';
     this.stateStartTime = performance.now();
   }
 
   // New API: Stop and highlight list of winners
   public stopAndHighlightWinners(
-    winners: string[], 
+    winners: string[],
     onWinnerHighlight: (name: string) => void,
-    onAllFinished: () => void
+    onAllFinished: () => void,
+    config: StopConfig = {}
   ) {
     if (this.names.length === 0) {
         onAllFinished();
@@ -184,10 +210,11 @@ export class LotterySphere {
     this.currentWinnerIndex = 0;
     this.onWinnerHighlight = onWinnerHighlight;
     this.onAllFinished = onAllFinished;
+    this.stopConfig = config;
 
     // Start deceleration process towards the first winner
     if (this.winnersQueue.length > 0) {
-        this.prepareDeceleration(this.winnersQueue[0]);
+        this.prepareDeceleration(this.winnersQueue[0], this.stopConfig);
         this.state = 'decelerating';
         this.stateStartTime = performance.now();
     } else {
@@ -217,12 +244,15 @@ export class LotterySphere {
       this.group.rotation.y += this.baseSpeed.y;
       this.group.rotation.x += this.baseSpeed.x;
     } else if (this.state === 'accelerating') {
-      const duration = 1000;
+      const duration = this.spinPlan ? this.spinPlan.accelerationDuration : 1000;
       const progress = Math.min((now - this.stateStartTime) / duration, 1);
       const eased = this.easeInQuad(progress);
       
-      this.currentSpeed.x = this.baseSpeed.x + (this.maxSpeed.x - this.baseSpeed.x) * eased;
-      this.currentSpeed.y = this.baseSpeed.y + (this.maxSpeed.y - this.baseSpeed.y) * eased;
+      const maxSpeedY = this.spinPlan ? this.spinPlan.maxAngularVelocity * 16.6 : 0.1; // rad/ms to rad/frame
+      const maxSpeedX = maxSpeedY * 0.5;
+
+      this.currentSpeed.x = this.baseSpeed.x + (maxSpeedX - this.baseSpeed.x) * eased;
+      this.currentSpeed.y = this.baseSpeed.y + (maxSpeedY - this.baseSpeed.y) * eased;
       
       this.group.rotation.y += this.currentSpeed.y;
       this.group.rotation.x += this.currentSpeed.x;
@@ -232,9 +262,20 @@ export class LotterySphere {
         this.stateStartTime = now;
       }
     } else if (this.state === 'constant') {
-      // Just spin at max speed
-      this.group.rotation.y += this.maxSpeed.y;
-      this.group.rotation.x += this.maxSpeed.x;
+      const duration = this.spinPlan ? this.spinPlan.constantDuration : 2000;
+      const progress = Math.min((now - this.stateStartTime) / duration, 1);
+
+      const maxSpeedY = this.spinPlan ? this.spinPlan.maxAngularVelocity * 16.6 : 0.1;
+      const maxSpeedX = maxSpeedY * 0.5;
+
+      this.group.rotation.y += maxSpeedY;
+      this.group.rotation.x += maxSpeedX;
+
+      if (this.spinPlan && progress >= 1) {
+          // If we have a plan, we move to decelerating automatically after constant phase
+          // But wait, the stopAndHighlightWinners call currently triggers deceleration.
+          // Let's keep it manual for now to not break LotteryManager flow.
+      }
     } else if (this.state === 'decelerating') {
       const duration = this.decelerationDuration;
       const progress = Math.min((now - this.stateStartTime) / duration, 1);
@@ -292,7 +333,7 @@ export class LotterySphere {
     this.renderer.render(this.scene, this.camera);
   }
 
-  private prepareDeceleration(targetName: string) {
+  private prepareDeceleration(targetName: string, config: StopConfig = {}) {
     // Similar to previous prepareDeceleration, but targeting a specific name
     const winnerSprite = this.group.children.find(
       child => child.userData.name === targetName
@@ -313,8 +354,8 @@ export class LotterySphere {
     this.startQuaternion.copy(this.group.quaternion);
     this.extraRotationAxis.set(0, 1, 0); 
     // Reset revs for full deceleration
-    this.extraRotationRevs = 24;
-    this.decelerationDuration = 12000;
+    this.extraRotationRevs = config.extraRevs ?? 24;
+    this.decelerationDuration = config.durationMs ?? 12000;
   }
 
   private prepareTransitionToNext(targetName: string) {
