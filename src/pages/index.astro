@@ -977,6 +977,7 @@ import '../styles/global.scss'
                                 <span><span data-i18n="imported">已导入:</span> <strong id="valid-count" style="color: #fff">0</strong> <span data-i18n="people">人</span></span>
                                 <div style="display: flex; gap: 10px;">
                                     <button id="import-file-btn" class="dashed-btn" data-i18n="importFile">📂 导入文件</button>
+                                    <button id="import-blob-btn" class="dashed-btn" data-i18n="importBlob">🔐 使用名单</button>
                                     <button id="save-names-btn" class="primary-btn" data-i18n="saveNames">保存名单</button>
                                 </div>
                             </div>
@@ -1119,6 +1120,7 @@ import '../styles/global.scss'
             const validCountEl = document.getElementById('valid-count') as HTMLElement;
             const saveNamesBtn = document.getElementById('save-names-btn') as HTMLButtonElement;
             const importFileBtn = document.getElementById('import-file-btn') as HTMLButtonElement;
+            const importBlobBtn = document.getElementById('import-blob-btn') as HTMLButtonElement;
 
             // Prize Config Elements (inside System Modal)
             const prizeListConfigEl = document.getElementById('prize-list-config') as HTMLDivElement;
@@ -1250,6 +1252,7 @@ import '../styles/global.scss'
                 startBtn.disabled = state.isDrawing;
                 systemConfigBtn.disabled = state.isDrawing;
                 prizeSelect.disabled = state.isDrawing;
+                if (importBlobBtn) importBlobBtn.disabled = state.isDrawing;
 
                 // Update Mode UI
                 modeBtns.forEach(btn => {
@@ -1420,6 +1423,65 @@ import '../styles/global.scss'
                     reader.readAsText(file);
                 };
                 input.click();
+            });
+
+            importBlobBtn?.addEventListener('click', async () => {
+                const password = await modalManager.prompt('', {
+                    titleKey: 'confirm',
+                    messageKey: 'enterPassword',
+                    inputType: 'password',
+                    allowOutsideClick: false,
+                    allowEsc: true
+                });
+                if (password === null) return;
+
+                try {
+                    const loginRes = await fetch('/api/login', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ password })
+                    });
+
+                    if (!loginRes.ok) {
+                        await modalManager.alert('', { messageKey: 'authFailed' });
+                        return;
+                    }
+
+                    const namesRes = await fetch('/api/names');
+                    if (!namesRes.ok) {
+                        await modalManager.alert('', { messageKey: 'cloudImportFailed' });
+                        return;
+                    }
+
+                    const data = await namesRes.json().catch(() => ({ names: [] }));
+                    const incomingNames = Array.isArray(data.names) ? data.names : [];
+                    const normalizedNames = incomingNames
+                        .map((n: string) => n.trim().replace(/\s+/g, ' '))
+                        .filter((n: string) => Boolean(n));
+                    const dedupedNames = Array.from(new Set(normalizedNames));
+
+                    if (dedupedNames.length === 0) {
+                        await modalManager.alert('', { messageKey: 'noValidNames' });
+                        return;
+                    }
+
+                    if (namesInput) {
+                        namesInput.value = dedupedNames.join('\n');
+                        processInput();
+                    }
+
+                    store.setState({
+                        candidates: dedupedNames,
+                        results: {},
+                        freeResults: [],
+                        freeInitialCandidates: [...dedupedNames]
+                    });
+                    syncWithStore();
+                    updateStatus(t('listUpdated'));
+                    modalManager.toast('', { messageKey: 'cloudImportSuccess' });
+                } catch (err) {
+                    await modalManager.alert('', { messageKey: 'cloudImportFailed' });
+                }
             });
 
             // --- Prize Config Logic ---

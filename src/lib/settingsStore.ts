@@ -6,7 +6,7 @@ export const DEFAULT_SETTINGS: SphereSettings = {
   rotationSpeed: 0.2, // rad/s
   spinTurns: 3,
   spinDuration: 5,    // s
-  extraRevs: 6,
+  extraRevs: 3,
 };
 
 type SettingsListener = (settings: SphereSettings) => void;

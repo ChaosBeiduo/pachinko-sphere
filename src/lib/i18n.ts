@@ -16,6 +16,7 @@ export const translations = {
     candidatePlaceholder: "请输入或粘贴姓名，每行一个...",
     imported: "已导入:",
     importFile: "📂 导入文件",
+    importBlob: "🔐 使用名单",
     saveNames: "保存名单",
     addPrize: "+ 添加新奖项",
     prizeName: "奖项名称",
@@ -52,6 +53,12 @@ export const translations = {
     confirm: "确认",
     cancel: "取消",
     close: "关闭"
+    ,
+    enterPassword: "请输入口令",
+    authFailed: "口令错误，请重试",
+    cloudImportFailed: "导入云端名单失败，请稍后重试",
+    cloudImportSuccess: "已导入云端名单",
+    noValidNames: "名单为空或格式无效"
   },
   en: {
     systemConfig: "⚙️ Settings",
@@ -70,6 +77,7 @@ export const translations = {
     candidatePlaceholder: "Enter or paste names, one per line...",
     imported: "Imported:",
     importFile: "📂 Import File",
+    importBlob: "🔐 Use Name List",
     saveNames: "Save List",
     addPrize: "+ Add Prize",
     prizeName: "Prize Name",
@@ -105,7 +113,12 @@ export const translations = {
     tip: "Tip",
     confirm: "Confirm",
     cancel: "Cancel",
-    close: "Close"
+    close: "Close",
+    enterPassword: "Enter passphrase",
+    authFailed: "Invalid passphrase",
+    cloudImportFailed: "Failed to import cloud name list",
+    cloudImportSuccess: "Cloud name list imported",
+    noValidNames: "Name list is empty or invalid"
   }
 };
 

@@ -17,6 +17,12 @@ export interface ModalOptions {
   duration?: number; // For toast
 }
 
+export interface PromptOptions extends Partial<ModalOptions> {
+  placeholder?: string;
+  inputType?: 'text' | 'password';
+  initialValue?: string;
+}
+
 interface ActiveModal {
   id: string;
   options: ModalOptions;
@@ -134,6 +140,22 @@ class ModalManager {
           color: #ccc;
           line-height: 1.6;
         }
+        .modal-input {
+          width: 100%;
+          margin-top: 12px;
+          padding: 10px 12px;
+          border-radius: 8px;
+          border: 1px solid rgba(255, 255, 255, 0.15);
+          background: rgba(255, 255, 255, 0.05);
+          color: #fff;
+          outline: none;
+          font-size: 0.95rem;
+          box-sizing: border-box;
+        }
+        .modal-input:focus {
+          border-color: #ff4d7d;
+          box-shadow: 0 0 0 2px rgba(255, 77, 125, 0.25);
+        }
         .modal-footer {
           display: flex;
           justify-content: flex-end;
@@ -222,6 +244,85 @@ class ModalManager {
     } catch {
       return false;
     }
+  }
+
+  async prompt(message: string, options: PromptOptions = {}): Promise<string | null> {
+    this.ensureContainer();
+    const title = options.titleKey ? this.t(options.titleKey) : (options.title || this.t('confirm'));
+    const text = options.messageKey ? this.t(options.messageKey, options.messageParams) : message;
+    const confirmText = options.confirmKey ? this.t(options.confirmKey) : (options.confirmText || this.t('confirm'));
+    const cancelText = options.cancelKey ? this.t(options.cancelKey) : (options.cancelText || this.t('cancel'));
+    const inputType = options.inputType || 'text';
+    const placeholder = options.placeholder || '';
+    const initialValue = options.initialValue || '';
+
+    return new Promise((resolve) => {
+      const modalId = `modal-${Date.now()}`;
+      const modalHtml = `
+        <div id="${modalId}" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="${modalId}-title">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h3 id="${modalId}-title">${title}</h3>
+            </div>
+            <div class="modal-body">
+              <p>${text}</p>
+              <input class="modal-input" type="${inputType}" placeholder="${placeholder}" value="${initialValue}">
+            </div>
+            <div class="modal-footer">
+              <button class="modal-btn cancel-btn">${cancelText}</button>
+              <button class="modal-btn confirm-btn primary-btn">${confirmText}</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      this.container!.insertAdjacentHTML('beforeend', modalHtml);
+      const modalElement = document.getElementById(modalId)!;
+      void modalElement.offsetWidth;
+      modalElement.classList.add('active');
+
+      const inputEl = modalElement.querySelector('.modal-input') as HTMLInputElement;
+      const confirmBtn = modalElement.querySelector('.confirm-btn') as HTMLButtonElement;
+      const cancelBtn = modalElement.querySelector('.cancel-btn') as HTMLButtonElement;
+
+      const cleanup = () => {
+        modalElement.classList.remove('active');
+        setTimeout(() => {
+          modalElement.remove();
+        }, 300);
+      };
+
+      const handleConfirm = () => {
+        const value = inputEl.value;
+        cleanup();
+        resolve(value);
+      };
+
+      const handleCancel = () => {
+        cleanup();
+        resolve(null);
+      };
+
+      confirmBtn.addEventListener('click', handleConfirm);
+      cancelBtn.addEventListener('click', handleCancel);
+
+      modalElement.addEventListener('click', (e) => {
+        if (e.target === modalElement && options.allowOutsideClick !== false) handleCancel();
+      });
+
+      inputEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleConfirm();
+      });
+
+      const handleEsc = (e: KeyboardEvent) => {
+        if (e.key === 'Escape' && options.allowEsc !== false) {
+          handleCancel();
+          document.removeEventListener('keydown', handleEsc);
+        }
+      };
+      document.addEventListener('keydown', handleEsc);
+      setTimeout(() => inputEl.focus(), 0);
+    });
   }
 
   toast(message: string, options: { messageKey?: keyof typeof translations['zh'], duration?: number } = {}) {
