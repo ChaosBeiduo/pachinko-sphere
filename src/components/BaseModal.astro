@@ -1,0 +1,54 @@
+---
+interface Props {
+  id: string;
+  title?: string;
+  showClose?: boolean;
+  class?: string;
+}
+
+const { id, title, showClose = true, class: className = "" } = Astro.props;
+---
+
+<div id={id} class={`modal-overlay ${className}`} data-modal-type="base">
+  <div class="modal-content">
+    {
+      title || showClose ? (
+        <div class="modal-header">
+          {title && <h3>{title}</h3>}
+          {showClose && (
+            <button class="close-modal-btn" aria-label="Close">
+              &times;
+            </button>
+          )}
+        </div>
+      ) : null
+    }
+    <div class="modal-body">
+      <slot />
+    </div>
+    <div class="modal-footer">
+      <slot name="footer" />
+    </div>
+  </div>
+</div>
+
+<script>
+  // Handle closing modal
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (target.classList.contains("modal-overlay")) {
+      target.classList.remove("active");
+    }
+    if (target.closest(".close-modal-btn")) {
+      const modal = target.closest(".modal-overlay");
+      if (modal) modal.classList.remove("active");
+    }
+  });
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape") {
+      const activeModal = document.querySelector(".modal-overlay.active");
+      if (activeModal) activeModal.classList.remove("active");
+    }
+  });
+</script>

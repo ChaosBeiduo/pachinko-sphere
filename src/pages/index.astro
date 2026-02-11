@@ -1,4 +1,5 @@
 ---
+import '../styles/global.scss'
 ---
 
 <html lang="en">
@@ -9,14 +10,7 @@
 		<meta name="viewport" content="width=device-width" />
 		<meta name="generator" content={Astro.generator} />
 		<title>Pachinko Sphere</title>
-		<style>
-			body {
-				margin: 0;
-				overflow: hidden;
-				background-color: #111; /* Dark background to make names pop */
-				font-family: system-ui, sans-serif;
-				color: white;
-			}
+		<style is:global>
 			#sphere-container {
 				width: 100vw;
 				height: 100vh;
@@ -90,39 +84,6 @@
                 font-size: 1.1rem;
             }
 			
-			button {
-				pointer-events: auto;
-				padding: 12px 32px;
-				font-size: 1.2rem;
-				font-weight: bold;
-				color: #fff;
-				background:  rgba(255, 255, 255, 0.1);
-                backdrop-filter: blur(5px);
-                border: 1px solid rgba(255, 255, 255, 0.2);
-				border-radius: 50px;
-				cursor: pointer;
-				transition: all ease 0.2s;
-				text-transform: uppercase;
-				letter-spacing: 1px;
-			}
-			
-			button:hover {
-				background: rgba(255, 255, 255, 0.3); 
-                backdrop-filter: blur(12px);
-                box-shadow: 0 8px 32px 0 rgba(255, 255, 255, 0.1);
-			}
-			
-			button:active {
-				transform: translateY(1px);
-			}
-			
-			button:disabled {
-				background: #555;
-				cursor: not-allowed;
-				box-shadow: none;
-				transform: none;
-			}
-
 			#status-display {
 				font-size: 1.5rem;
 				font-weight: bold;
@@ -246,20 +207,6 @@
                     background-position: 200% center;
                 }
             }
-
-			.next-btn {
-				margin-top: 40px;
-                padding: 15px 40px;
-                font-size: 1.3rem;
-                background: white;
-                color: #111;
-			}
-			
-			.next-btn:hover {
-                background: #eee;
-				transform: translateY(-2px);
-				box-shadow: 0 6px 20px rgba(255, 255, 255, 0.3);
-			}
 
             /* Result Modal Badges */
             #modal-winners-list {
@@ -398,13 +345,9 @@
                 background: transparent;
                 border: 2px dashed #444;
                 color: #888;
-                border-radius: 8px;
-                padding: 10px;
-                cursor: pointer;
                 transition: all 0.2s;
                 text-transform: none;
                 letter-spacing: normal;
-                font-size: 1rem;
             }
 
             .dashed-btn:hover {
@@ -415,25 +358,6 @@
                 box-shadow: none;
             }
 
-            .primary-btn {
-                background: linear-gradient(45deg, #ff3366, #ff6b6b);
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-weight: bold;
-                cursor: pointer;
-                box-shadow: 0 4px 15px rgba(255, 51, 102, 0.3);
-                font-size: 1rem;
-                text-transform: none;
-                letter-spacing: normal;
-            }
-
-            .primary-btn:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 6px 20px rgba(255, 51, 102, 0.5);
-            }
-            
             .small {
                 padding: 5px 15px;
                 font-size: 0.8rem;
@@ -1005,11 +929,11 @@
 
 		<script>
 			import { LotterySphere } from '../components/LotterySphere';
-			import names from '../data/name';
-            import { createPrize, validatePrizeList } from '../lib/prizeConfigState';
-            import { drawWinners } from '../lib/drawEngine';
-            import type { Prize } from '../lib/types';
+            import { store } from '../lib/store';
+            import { modalManager } from '../lib/modalManager';
             import { translations, type Language } from '../lib/i18n';
+            import { createPrize } from '../lib/prizeConfigState';
+            import { LotteryManager } from '../lib/lotteryManager';
 
 			const canvas = document.getElementById('lottery-canvas') as HTMLCanvasElement;
 			const startBtn = document.getElementById('start-btn') as HTMLButtonElement;
@@ -1047,24 +971,40 @@
 			const nextBtn = document.getElementById('next-btn') as HTMLButtonElement;
 			
 			let sphere: LotterySphere | null = null;
-			let isLotteryRunning = false;
+
+            // Initialize Lottery Manager to decouple logic from UI
+            const lotteryManager = new LotteryManager({
+                sphere: null, // Will be set after sphere is initialized
+                onDrawStart: (prizeTitle) => {
+                    updateStatus(t('drawingStatus', { prize: prizeTitle }));
+                },
+                onDrawComplete: (prizeTitle, winners) => {
+                    updateStatus(t('drawComplete'));
+                    
+                    // Show result modal with animation
+                    resultModalOverlay.classList.add('visible');
+                    if (modalTitle) modalTitle.textContent = t('prizeResult', { prize: prizeTitle });
+                    if (modalWinnersList) {
+                        modalWinnersList.innerHTML = winners.map((w: string) => `<span class="badge">${w}</span>`).join('');
+                    }
+                    if (currentHighlight) currentHighlight.textContent = '';
+                    
+                    renderResultsPanel();
+                },
+                onWinnerHighlight: (name) => {
+                    if (currentHighlight) {
+                        currentHighlight.textContent = name;
+                        currentHighlight.classList.remove('pop');
+                        void currentHighlight.offsetWidth;
+                        currentHighlight.classList.add('pop');
+                    }
+                }
+            });
             
-            // State
-            let currentNamesList = [...names];
-            let prizes: Prize[] = [
-                createPrize('一等奖', 1, '大奖'),
-                createPrize('二等奖', 2),
-                createPrize('三等奖', 5)
-            ];
-            let results: Record<string, string[]> = {};
-            let currentPrizeId = prizes[0].id;
-
-            // I18n Logic
-            let currentLang: Language = (localStorage.getItem('lang') as Language) || 'zh';
-
             function t(key: keyof typeof translations['zh'], params: Record<string, string | number> = {}) {
+                const state = store.getState();
                 // @ts-ignore
-                let text = translations[currentLang][key] || key;
+                let text = translations[state.language][key] || key;
                 Object.entries(params).forEach(([k, v]) => {
                     text = text.replace(`{${k}}`, String(v));
                 });
@@ -1072,8 +1012,7 @@
             }
 
             function updateLanguage(lang: Language) {
-                currentLang = lang;
-                localStorage.setItem('lang', lang);
+                const state = store.getState();
                 
                 // Update simple elements
                 document.querySelectorAll('[data-i18n]').forEach(el => {
@@ -1090,20 +1029,44 @@
                 renderPrizeConfigList();
                 
                 // Update status if idle
-                if (!isLotteryRunning && statusDisplay) {
-                    // Only reset if it's "Ready" or "Finished" (simple check)
-                    // Or just always reset to Ready if idle
+                if (!state.isDrawing && statusDisplay) {
                     updateStatus(t('ready'));
                 }
+            }
 
-                // Update select dropdown options if needed (though prizes titles are data, not i18n keys)
-                // But we should update the static text around it
+            // Sync UI with Store
+            function syncWithStore() {
+                const state = store.getState();
+                
+                // Update Candidates in Sphere
+                if (sphere) {
+                    sphere.setNames(state.candidates);
+                }
+
+                // Update UI elements
+                renderPrizeOptions();
+                renderResultsPanel();
+                updateCurrentPrizeInfo();
+                updateLanguage(state.language);
+                
+                // Update Name Input if empty
+                if (namesInput && !namesInput.value && state.candidates.length > 0) {
+                    namesInput.value = state.candidates.join('\n');
+                    processInput();
+                }
+
+                // Update Drawing State
+                startBtn.disabled = state.isDrawing;
+                systemConfigBtn.disabled = state.isDrawing;
+                prizeSelect.disabled = state.isDrawing;
             }
 
             if (langSelect) {
-                langSelect.value = currentLang;
+                langSelect.value = store.getState().language;
                 langSelect.addEventListener('change', (e) => {
-                    updateLanguage((e.target as HTMLSelectElement).value as Language);
+                    const newLang = (e.target as HTMLSelectElement).value as Language;
+                    store.setLanguage(newLang);
+                    updateLanguage(newLang);
                 });
             }
 
@@ -1122,31 +1085,23 @@
                 btn.addEventListener('click', () => {
                     const lang = (btn as HTMLElement).dataset.lang as Language;
                     if (lang) {
+                        store.setLanguage(lang);
                         updateLanguage(lang);
                         localStorage.setItem('visited', 'true');
                         if (welcomeModalOverlay) {
                             welcomeModalOverlay.classList.remove('visible');
-                            // Remove from DOM after transition
-                            setTimeout(() => {
-                                welcomeModalOverlay.remove();
-                            }, 500); // 500ms matches CSS transition
+                            setTimeout(() => welcomeModalOverlay.remove(), 500);
                         }
-                        
-                        // Sync with system modal selector
                         if (langSelect) langSelect.value = lang;
                     }
                 });
             });
 
-            // Call checkFirstVisit on load
-            // We use setTimeout to ensure transition works and it feels like a proper entry
             setTimeout(checkFirstVisit, 100);
 
-            // Initial call
-            updateLanguage(currentLang);
-
 			if (canvas) {
-				sphere = new LotterySphere(canvas, currentNamesList);
+				sphere = new LotterySphere(canvas, store.getState().candidates);
+                lotteryManager.setSphere(sphere);
 			}
             
             window.addEventListener('beforeunload', () => {
@@ -1158,16 +1113,12 @@
 			}
             
             // --- System Modal Logic ---
-
-            // Open
             systemConfigBtn?.addEventListener('click', () => {
                 systemModalOverlay.classList.add('visible');
-                // Initialize data in tabs
                 initNameSettings();
                 renderPrizeConfigList();
             });
 
-            // Close
             function closeSystemModal() {
                 systemModalOverlay.classList.remove('visible');
             }
@@ -1182,16 +1133,11 @@
                 }
             });
 
-            // Tabs
-            tabBtns.forEach((btn, index) => {
+            tabBtns.forEach((btn) => {
                 btn.addEventListener('click', () => {
-                    // Deactivate all
                     tabBtns.forEach(b => b.classList.remove('active'));
                     tabContents.forEach(c => c.classList.remove('active'));
-                    
-                    // Activate current
                     btn.classList.add('active');
-                    // Find the tab content that matches the data-tab
                     const tabId = (btn as HTMLElement).dataset.tab;
                     const content = document.getElementById(`tab-${tabId}`);
                     content?.classList.add('active');
@@ -1199,11 +1145,10 @@
             });
 
             // --- Name Settings Logic ---
-
             function initNameSettings() {
-                // If textarea is empty but we have names, fill it
-                if (namesInput && !namesInput.value && currentNamesList.length > 0) {
-                    namesInput.value = currentNamesList.join('\n');
+                const state = store.getState();
+                if (namesInput && !namesInput.value && state.candidates.length > 0) {
+                    namesInput.value = state.candidates.join('\n');
                     processInput();
                 }
             }
@@ -1212,47 +1157,38 @@
                 if (!namesInput) return [];
                 const rawText = namesInput.value;
                 const lines = rawText.split('\n');
-                
                 const validNames: string[] = [];
                 const seen = new Set<string>();
                 
                 lines.forEach(line => {
                     const clean = line.trim().replace(/\s+/g, ' ');
                     if (!clean) return;
-                    
                     if (!seen.has(clean)) {
                         seen.add(clean);
                         validNames.push(clean);
                     }
                 });
                 
-                // Update UI
                 if (validCountEl) validCountEl.textContent = validNames.length.toString();
-                
-                if (validNames.length === 0) {
-                    if (saveNamesBtn) saveNamesBtn.disabled = true;
-                } else {
-                    if (saveNamesBtn) saveNamesBtn.disabled = false;
-                }
-                
+                if (saveNamesBtn) saveNamesBtn.disabled = validNames.length === 0;
                 return validNames;
             }
 
             namesInput?.addEventListener('input', processInput);
 
-            saveNamesBtn?.addEventListener('click', () => {
+            saveNamesBtn?.addEventListener('click', async () => {
                 const newNames = processInput();
                 if (newNames.length === 0) return;
                 
-                if (confirm(t('saveResetConfirm'))) {
-                    currentNamesList = newNames;
-                    results = {};
-                    renderResultsPanel();
-                    sphere?.setNames(newNames);
-                    
+                const confirmed = await modalManager.confirm(t('saveResetConfirm'));
+                if (confirmed) {
+                    store.setState({
+                        candidates: newNames,
+                        results: {}
+                    });
+                    syncWithStore();
                     updateStatus(t('listUpdated'));
-                    // Optional: Close modal or just give feedback
-                    alert(t('listSaved'));
+                    modalManager.alert(t('listSaved'));
                 }
             });
 
@@ -1263,7 +1199,6 @@
                 input.onchange = (e) => {
                     const file = (e.target as HTMLInputElement).files?.[0];
                     if (!file) return;
-                    
                     const reader = new FileReader();
                     reader.onload = (e) => {
                         const text = e.target?.result as string;
@@ -1278,11 +1213,12 @@
             });
 
             // --- Prize Config Logic ---
-
             function renderPrizeConfigList() {
                 if (!prizeListConfigEl) return;
                 prizeListConfigEl.innerHTML = '';
-                prizes.forEach((p) => {
+                const state = store.getState();
+                
+                state.prizes.forEach((p) => {
                     const row = document.createElement('div');
                     row.className = 'prize-config-row';
                     row.innerHTML = `
@@ -1296,26 +1232,39 @@
                     const delBtn = row.querySelector('.delete-prize-btn') as HTMLButtonElement;
                     
                     titleInput.addEventListener('change', () => {
-                        p.title = titleInput.value;
-                        renderPrizeOptions(); // Live update dropdown
+                        const newPrizes = state.prizes.map(item => 
+                            item.id === p.id ? { ...item, title: titleInput.value } : item
+                        );
+                        store.updatePrizes(newPrizes);
+                        renderPrizeOptions();
                     });
                     
                     countInput.addEventListener('change', () => {
                         let val = parseInt(countInput.value);
                         if (val < 1) val = 1;
-                        p.count = val;
+                        const newPrizes = state.prizes.map(item => 
+                            item.id === p.id ? { ...item, count: val } : item
+                        );
+                        store.updatePrizes(newPrizes);
                         updateCurrentPrizeInfo();
                     });
                     
-                    delBtn.addEventListener('click', () => {
-                        if (prizes.length <= 1) {
-                            alert(t('atLeastOnePrize'));
+                    delBtn.addEventListener('click', async () => {
+                        if (state.prizes.length <= 1) {
+                            modalManager.alert(t('atLeastOnePrize'));
                             return;
                         }
-                        if (!confirm(t('deletePrizeConfirm', { prize: p.title }))) return;
+                        const confirmed = await modalManager.confirm(t('deletePrizeConfirm', { prize: p.title }));
+                        if (!confirmed) return;
                         
-                        prizes = prizes.filter(x => x.id !== p.id);
-                        if (currentPrizeId === p.id) currentPrizeId = prizes[0].id;
+                        const newPrizes = state.prizes.filter(x => x.id !== p.id);
+                        let newCurrentId = state.currentPrizeId;
+                        if (state.currentPrizeId === p.id) newCurrentId = newPrizes[0].id;
+                        
+                        store.setState({
+                            prizes: newPrizes,
+                            currentPrizeId: newCurrentId
+                        });
                         renderPrizeConfigList();
                         renderPrizeOptions();
                     });
@@ -1325,44 +1274,48 @@
             }
 
             addPrizeBtn?.addEventListener('click', () => {
-                prizes.push(createPrize(`${t('newPrize')} ${prizes.length + 1}`, 1));
+                const state = store.getState();
+                const newPrize = createPrize(`${t('newPrize')} ${state.prizes.length + 1}`, 1);
+                store.updatePrizes([...state.prizes, newPrize]);
                 renderPrizeConfigList();
                 renderPrizeOptions();
             });
 
             // --- Main Lottery Logic ---
-
             function renderPrizeOptions() {
                 if (!prizeSelect) return;
+                const state = store.getState();
                 prizeSelect.innerHTML = '';
-                prizes.forEach(p => {
+                state.prizes.forEach(p => {
                     const option = document.createElement('option');
                     option.value = p.id;
                     option.textContent = p.title;
                     prizeSelect.appendChild(option);
                 });
-                prizeSelect.value = currentPrizeId;
+                prizeSelect.value = state.currentPrizeId;
                 updateCurrentPrizeInfo();
             }
 
             function updateCurrentPrizeInfo() {
-                const p = prizes.find(x => x.id === currentPrizeId);
+                const state = store.getState();
+                const p = state.prizes.find(x => x.id === state.currentPrizeId);
                 if (p && drawCountEl) {
                     drawCountEl.textContent = p.count.toString();
                 }
             }
             
             prizeSelect?.addEventListener('change', (e) => {
-                currentPrizeId = (e.target as HTMLSelectElement).value;
+                store.setCurrentPrize((e.target as HTMLSelectElement).value);
                 updateCurrentPrizeInfo();
             });
 
             function renderResultsPanel() {
                 if (!winnersContainer) return;
                 winnersContainer.innerHTML = '';
+                const state = store.getState();
                 
-                prizes.forEach(p => {
-                    const winners = results[p.id] || [];
+                state.prizes.forEach(p => {
+                    const winners = state.results[p.id] || [];
                     if (winners.length === 0) return;
                     
                     const group = document.createElement('div');
@@ -1378,115 +1331,26 @@
                 });
             }
             
-            clearResultsBtn?.addEventListener('click', () => {
-                if (confirm(t('confirmClear'))) {
-                    results = {};
-                    renderResultsPanel();
-                    
-                    // Restore names from full list (or just reload page? No, better state reset)
-                    // Actually, we should restore to what's in the Name Settings or original
-                    // Let's assume processInput gives us the "Configured" list
-                    const namesToRestore = processInput(); 
-                    if (namesToRestore.length > 0) {
-                        currentNamesList = namesToRestore;
-                    }
-                    
-                    sphere?.setNames(currentNamesList);
+            clearResultsBtn?.addEventListener('click', async () => {
+                const confirmed = await modalManager.confirm(t('confirmClear'));
+                if (confirmed) {
+                    store.reset();
+                    syncWithStore();
                     updateStatus(t('resetComplete'));
-                    startBtn.disabled = false;
                 }
             });
 
             startBtn?.addEventListener('click', () => {
-                if (isLotteryRunning) return;
-                
-                const prize = prizes.find(p => p.id === currentPrizeId);
-                if (!prize) return;
-                
-                // Check if we need to overwrite
-                const existingWinners = results[prize.id];
-                if (existingWinners && existingWinners.length > 0) {
-                    if (!confirm(t('prizeOverwriteConfirm', { prize: prize.title }))) {
-                        return;
-                    }
-                    
-                    // Rollback candidates
-                    // Add existing winners back to pool
-                    currentNamesList.push(...existingWinners);
-                    // Clear result
-                    delete results[prize.id];
-                    // Visual update (re-add names to sphere if we removed them)
-                    sphere?.setNames(currentNamesList);
-                    // Update sidebar
-                    renderResultsPanel();
-                }
-                
-                if (currentNamesList.length < prize.count) {
-                    alert(t('insufficientCandidates', { count: currentNamesList.length, needed: prize.count }));
-                    return;
-                }
-                
-                isLotteryRunning = true;
-                startBtn.disabled = true;
-                systemConfigBtn.disabled = true;
-                prizeSelect.disabled = true;
-                updateStatus(t('drawingStatus', { prize: prize.title }));
-                
-                // 1. Start spinning
-                sphere?.spin();
-                
-                // 2. Draw winners
-                const { winners, remainingCandidates } = drawWinners(currentNamesList, prize.count);
-                
-                // 3. Stop after delay
-                setTimeout(() => {
-                    sphere?.stopAndHighlightWinners(
-                        winners, 
-                        (name) => {
-                            if (currentHighlight) {
-                                currentHighlight.textContent = name;
-                                currentHighlight.classList.remove('pop');
-                                void currentHighlight.offsetWidth;
-                                currentHighlight.classList.add('pop');
-                            }
-                        },
-                        () => {
-                            // Finished
-                            isLotteryRunning = false;
-                            updateStatus(t('drawComplete'));
-                            
-                            // Commit results
-                            currentNamesList = remainingCandidates;
-                            results[prize.id] = winners;
-                            
-                            // Show modal
-                            resultModalOverlay.classList.add('visible');
-                            if (modalTitle) modalTitle.textContent = t('prizeResult', { prize: prize.title });
-                            if (modalWinnersList) {
-                                modalWinnersList.innerHTML = winners.map(w => `<span class="badge">${w}</span>`).join('');
-                            }
-                            if (currentHighlight) currentHighlight.textContent = '';
-                            
-                            renderResultsPanel();
-                            
-                            // Remove winners from sphere (visual only, state is already updated)
-                            sphere?.setNames(currentNamesList);
-                        }
-                    );
-                }, 3000);
+                lotteryManager.startDraw();
             });
 
             nextBtn?.addEventListener('click', () => {
                 resultModalOverlay.classList.remove('visible');
                 updateStatus(t('ready'));
-                
-                startBtn.disabled = false;
-                systemConfigBtn.disabled = false;
-                prizeSelect.disabled = false;
             });
 
             // Init
-            renderPrizeOptions();
+            syncWithStore();
 		</script>
 	</body>
 </html>
