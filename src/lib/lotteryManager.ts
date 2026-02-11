@@ -62,7 +62,10 @@ export class LotteryManager {
     // 1. Check for overwrite if this prize already has winners
     const existingWinners = state.results[prize.id];
     if (existingWinners && existingWinners.length > 0) {
-      const confirmed = await modalManager.confirm(this.t('prizeOverwriteConfirm', { prize: prize.title }));
+      const confirmed = await modalManager.confirm('', { 
+        messageKey: 'prizeOverwriteConfirm',
+        messageParams: { prize: prize.title }
+      });
       if (!confirmed) return;
 
       // Rollback previous winners to candidates list
@@ -80,10 +83,13 @@ export class LotteryManager {
 
     const currentState = store.getState();
     if (currentState.candidates.length < prize.count) {
-      modalManager.alert(this.t('insufficientCandidates', { 
-        count: currentState.candidates.length, 
-        needed: prize.count 
-      }));
+      modalManager.alert('', {
+        messageKey: 'insufficientCandidates',
+        messageParams: { 
+          count: currentState.candidates.length, 
+          needed: prize.count 
+        }
+      });
       return;
     }
 
@@ -121,7 +127,10 @@ export class LotteryManager {
   private async drawFree() {
     const state = store.getState();
     if (state.candidates.length === 0) {
-      modalManager.alert(this.t('insufficientCandidates', { count: 0, needed: 1 }));
+      modalManager.alert('', {
+        messageKey: 'insufficientCandidates',
+        messageParams: { count: 0, needed: 1 }
+      });
       return;
     }
 

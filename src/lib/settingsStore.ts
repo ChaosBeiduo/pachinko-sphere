@@ -7,6 +7,8 @@ export const DEFAULT_SETTINGS: SphereSettings = {
   spinTurns: 5,
   spinDuration: 5,    // s
   extraRevs: 6,
+  extraOmega: 0.5,    // rad/s (slightly higher than idle 0.2)
+  extraBlendDuration: 300, // ms
 };
 
 type SettingsListener = (settings: SphereSettings) => void;
@@ -47,6 +49,12 @@ class SettingsStore {
     }
     if (typeof data.extraRevs === 'number' && data.extraRevs >= 0 && data.extraRevs <= 200) {
       settings.extraRevs = data.extraRevs;
+    }
+    if (typeof data.extraOmega === 'number' && data.extraOmega >= 0.1 && data.extraOmega <= 5) {
+      settings.extraOmega = data.extraOmega;
+    }
+    if (typeof data.extraBlendDuration === 'number' && data.extraBlendDuration >= 0 && data.extraBlendDuration <= 2000) {
+      settings.extraBlendDuration = data.extraBlendDuration;
     }
 
     return settings;

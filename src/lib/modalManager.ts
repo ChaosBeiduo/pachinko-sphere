@@ -1,17 +1,77 @@
+import { store } from './store';
+import { translations } from './i18n';
+
 export interface ModalOptions {
   title?: string;
+  titleKey?: keyof typeof translations['zh'];
   message: string;
+  messageKey?: keyof typeof translations['zh'];
+  messageParams?: Record<string, string | number>;
   confirmText?: string;
+  confirmKey?: keyof typeof translations['zh'];
   cancelText?: string;
+  cancelKey?: keyof typeof translations['zh'];
   type?: 'alert' | 'confirm' | 'toast';
   allowOutsideClick?: boolean;
   allowEsc?: boolean;
   duration?: number; // For toast
 }
 
+interface ActiveModal {
+  id: string;
+  options: ModalOptions;
+  resolve: (value: void | PromiseLike<void>) => void;
+  reject: (reason?: any) => void;
+}
+
 class ModalManager {
   private container: HTMLElement | null = null;
-  private activeModals: Set<string> = new Set();
+  private activeModals: Map<string, ActiveModal> = new Map();
+
+  constructor() {
+    // Listen for language changes to update active modals
+    if (typeof window !== 'undefined') {
+      store.subscribe(() => {
+        this.updateActiveModalsLanguage();
+      });
+    }
+  }
+
+  private t(key: string, params: Record<string, string | number> = {}) {
+    const state = store.getState();
+    const lang = state.language;
+    // @ts-ignore
+    let text = translations[lang][key] || key;
+    Object.entries(params).forEach(([k, v]) => {
+      text = text.replace(`{${k}}`, String(v));
+    });
+    return text;
+  }
+
+  private updateActiveModalsLanguage() {
+    this.activeModals.forEach((modal) => {
+      const modalElement = document.getElementById(modal.id);
+      if (!modalElement) return;
+
+      const titleEl = modalElement.querySelector(`#${modal.id}-title`);
+      const bodyEl = modalElement.querySelector('.modal-body p');
+      const confirmBtn = modalElement.querySelector('.confirm-btn');
+      const cancelBtn = modalElement.querySelector('.cancel-btn');
+
+      if (titleEl) {
+        titleEl.textContent = modal.options.titleKey ? this.t(modal.options.titleKey) : (modal.options.title || this.t('tip'));
+      }
+      if (bodyEl) {
+        bodyEl.textContent = modal.options.messageKey ? this.t(modal.options.messageKey, modal.options.messageParams) : modal.options.message;
+      }
+      if (confirmBtn) {
+        confirmBtn.textContent = modal.options.confirmKey ? this.t(modal.options.confirmKey) : (modal.options.confirmText || this.t('confirm'));
+      }
+      if (cancelBtn) {
+        cancelBtn.textContent = modal.options.cancelKey ? this.t(modal.options.cancelKey) : (modal.options.cancelText || this.t('cancel'));
+      }
+    });
+  }
 
   private ensureContainer() {
     if (!this.container) {
@@ -142,15 +202,16 @@ class ModalManager {
     }
   }
 
-  async alert(message: string, title: string = '提示'): Promise<void> {
-    return this.show({ message, title, type: 'alert' });
+  async alert(message: string, options: Partial<ModalOptions> = {}): Promise<void> {
+    return this.show({ message, title: '提示', ...options, type: 'alert' });
   }
 
-  async confirm(message: string, title: string = '确认'): Promise<boolean> {
+  async confirm(message: string, options: Partial<ModalOptions> = {}): Promise<boolean> {
     try {
       await this.show({ 
         message, 
-        title, 
+        title: '确认', 
+        ...options,
         type: 'confirm',
         allowOutsideClick: false,
         allowEsc: true
@@ -161,8 +222,10 @@ class ModalManager {
     }
   }
 
-  toast(message: string, duration: number = 3000) {
+  toast(message: string, options: { messageKey?: keyof typeof translations['zh'], duration?: number } = {}) {
     this.ensureContainer();
+    const text = options.messageKey ? this.t(options.messageKey) : message;
+    
     let toastContainer = document.querySelector('.toast-container');
     if (!toastContainer) {
       toastContainer = document.createElement('div');
@@ -172,9 +235,10 @@ class ModalManager {
 
     const toastItem = document.createElement('div');
     toastItem.className = 'toast-item';
-    toastItem.textContent = message;
+    toastItem.textContent = text;
     toastContainer.appendChild(toastItem);
 
+    const duration = options.duration || 3000;
     setTimeout(() => {
       toastItem.classList.add('hiding');
       setTimeout(() => toastItem.remove(), 300);
@@ -186,20 +250,26 @@ class ModalManager {
     
     return new Promise((resolve, reject) => {
       const modalId = `modal-${Date.now()}`;
+      
+      const title = options.titleKey ? this.t(options.titleKey) : (options.title || this.t('tip'));
+      const message = options.messageKey ? this.t(options.messageKey, options.messageParams) : options.message;
+      const confirmText = options.confirmKey ? this.t(options.confirmKey) : (options.confirmText || this.t('confirm'));
+      const cancelText = options.cancelKey ? this.t(options.cancelKey) : (options.cancelText || this.t('cancel'));
+
       const modalHtml = `
         <div id="${modalId}" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="${modalId}-title">
           <div class="modal-content">
             <div class="modal-header">
-              <h3 id="${modalId}-title">${options.title || '提示'}</h3>
+              <h3 id="${modalId}-title">${title}</h3>
             </div>
             <div class="modal-body">
-              <p>${options.message}</p>
+              <p>${message}</p>
             </div>
             <div class="modal-footer">
               ${options.type === 'confirm' ? `
-                <button class="modal-btn cancel-btn">${options.cancelText || '取消'}</button>
+                <button class="modal-btn cancel-btn">${cancelText}</button>
               ` : ''}
-              <button class="modal-btn confirm-btn primary-btn">${options.confirmText || '确定'}</button>
+              <button class="modal-btn confirm-btn primary-btn">${confirmText}</button>
             </div>
           </div>
         </div>
@@ -207,6 +277,9 @@ class ModalManager {
 
       this.container!.insertAdjacentHTML('beforeend', modalHtml);
       const modalElement = document.getElementById(modalId)!;
+      
+      // Store in active modals for language updates
+      this.activeModals.set(modalId, { id: modalId, options, resolve, reject });
       
       // Trigger reflow for animation
       void modalElement.offsetWidth;
@@ -252,8 +325,6 @@ class ModalManager {
         }
       };
       document.addEventListener('keydown', handleEsc);
-      
-      this.activeModals.add(modalId);
     });
   }
 }

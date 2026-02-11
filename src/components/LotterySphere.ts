@@ -1,6 +1,57 @@
 import * as THREE from 'three';
 import { type SpinPlan } from '../lib/spinMath';
 
+/**
+ * Manages the rotation state to ensure continuity in angle and velocity.
+ */
+class RotationController {
+  public theta = { x: 0, y: 0 };
+  public omega = { x: 0, y: 0 };
+  private targetOmega = { x: 0, y: 0 };
+  private blendStartTime = 0;
+  private blendDuration = 0;
+  private startOmega = { x: 0, y: 0 };
+  private mode: 'idle' | 'spinning' | 'extra' = 'idle';
+
+  update(dt: number) {
+    const now = performance.now();
+    const elapsed = now - this.blendStartTime;
+    const t = this.blendDuration > 0 ? Math.min(elapsed / this.blendDuration, 1) : 1;
+    
+    // Ease out cubic for omega blending
+    const easedT = 1 - Math.pow(1 - t, 3);
+
+    this.omega.x = this.startOmega.x + (this.targetOmega.x - this.startOmega.x) * easedT;
+    this.omega.y = this.startOmega.y + (this.targetOmega.y - this.startOmega.y) * easedT;
+
+    this.theta.x += this.omega.x * dt;
+    this.theta.y += this.omega.y * dt;
+  }
+
+  getMode() {
+    return this.mode;
+  }
+
+  setTargetOmega(newTarget: { x: number, y: number }, duration: number) {
+    this.startOmega = { ...this.omega };
+    this.targetOmega = { ...newTarget };
+    this.blendDuration = duration;
+    this.blendStartTime = performance.now();
+  }
+
+  setMode(mode: 'idle' | 'spinning' | 'extra', targetOmega: { x: number, y: number }, duration: number) {
+    this.mode = mode;
+    this.setTargetOmega(targetOmega, duration);
+  }
+
+  forceOmega(omega: { x: number, y: number }) {
+    this.omega = { ...omega };
+    this.startOmega = { ...omega };
+    this.targetOmega = { ...omega };
+    this.blendDuration = 0;
+  }
+}
+
 type AnimationState = 'idle' | 'accelerating' | 'constant' | 'decelerating' | 'highlighting';
 
 type StopConfig = {
@@ -20,6 +71,8 @@ export class LotterySphere {
   private renderer: THREE.WebGLRenderer;
   private group: THREE.Group;
   private animationId: number | null = null;
+  private lastFrameTime: number = performance.now();
+  private rotationController = new RotationController();
   private cleanupResize: () => void;
   
   // Lottery State
@@ -180,10 +233,18 @@ export class LotterySphere {
   }
 
   public setBaseSpeed(speedRadS: number) {
-    // Convert rad/s to rad/frame (approx 60fps)
-    const perFrame = speedRadS / 60;
-    this.baseSpeed.y = perFrame;
-    this.baseSpeed.x = perFrame * 0.5;
+    // Convert rad/s to rad/ms for RotationController
+    const perMs = speedRadS / 1000;
+    const targetOmega = { x: perMs * 0.5, y: perMs };
+    
+    if (this.state === 'idle') {
+      this.rotationController.setMode('idle', targetOmega, 500);
+    }
+  }
+
+  public updateSettings(extraOmegaRadS: number, extraBlendDurationMs: number) {
+    // This allows real-time updates of settings if needed
+    // But mostly we'll read them from window.appSettings in prepareDeceleration
   }
 
   // New API: Start spinning
@@ -192,6 +253,12 @@ export class LotterySphere {
     this.spinPlan = plan || null;
     this.state = 'accelerating';
     this.stateStartTime = performance.now();
+
+    if (this.spinPlan) {
+      const maxSpeedY = this.spinPlan.maxAngularVelocity; // rad/ms
+      const maxSpeedX = maxSpeedY * 0.5;
+      this.rotationController.setMode('spinning', { x: maxSpeedX, y: maxSpeedY }, this.spinPlan.accelerationDuration);
+    }
   }
 
   // New API: Stop and highlight list of winners
@@ -201,6 +268,10 @@ export class LotterySphere {
     onAllFinished: () => void,
     config: StopConfig = {}
   ) {
+    console.log('RotationController transition starting:', {
+      currentTheta: { ...this.rotationController.theta },
+      currentOmega: { ...this.rotationController.omega }
+    });
     if (this.names.length === 0) {
         onAllFinished();
         return;
@@ -239,67 +310,33 @@ export class LotterySphere {
     this.animationId = requestAnimationFrame(() => this.animate());
     
     const now = performance.now();
-    
-    if (this.state === 'idle') {
-      this.group.rotation.y += this.baseSpeed.y;
-      this.group.rotation.x += this.baseSpeed.x;
-    } else if (this.state === 'accelerating') {
-      const duration = this.spinPlan ? this.spinPlan.accelerationDuration : 1000;
-      const progress = Math.min((now - this.stateStartTime) / duration, 1);
-      const eased = this.easeInQuad(progress);
-      
-      const maxSpeedY = this.spinPlan ? this.spinPlan.maxAngularVelocity * 16.6 : 0.1; // rad/ms to rad/frame
-      const maxSpeedX = maxSpeedY * 0.5;
+    const dt = now - this.lastFrameTime;
+    this.lastFrameTime = now;
 
-      this.currentSpeed.x = this.baseSpeed.x + (maxSpeedX - this.baseSpeed.x) * eased;
-      this.currentSpeed.y = this.baseSpeed.y + (maxSpeedY - this.baseSpeed.y) * eased;
-      
-      this.group.rotation.y += this.currentSpeed.y;
-      this.group.rotation.x += this.currentSpeed.x;
-      
-      if (progress >= 1) {
-        this.state = 'constant';
-        this.stateStartTime = now;
-      }
-    } else if (this.state === 'constant') {
-      const duration = this.spinPlan ? this.spinPlan.constantDuration : 2000;
-      const progress = Math.min((now - this.stateStartTime) / duration, 1);
+    // 1. Update rotation state via controller
+    this.rotationController.update(dt);
 
-      const maxSpeedY = this.spinPlan ? this.spinPlan.maxAngularVelocity * 16.6 : 0.1;
-      const maxSpeedX = maxSpeedY * 0.5;
-
-      this.group.rotation.y += maxSpeedY;
-      this.group.rotation.x += maxSpeedX;
-
-      if (this.spinPlan && progress >= 1) {
-          // If we have a plan, we move to decelerating automatically after constant phase
-          // But wait, the stopAndHighlightWinners call currently triggers deceleration.
-          // Let's keep it manual for now to not break LotteryManager flow.
-      }
-    } else if (this.state === 'decelerating') {
+    // 2. Apply rotation to group
+    if (this.state === 'idle' || this.state === 'accelerating' || this.state === 'constant') {
+      this.group.rotation.set(this.rotationController.theta.x, this.rotationController.theta.y, 0);
+    } else if (this.state === 'decelerating' || this.state === 'highlighting') {
       const duration = this.decelerationDuration;
-      const progress = Math.min((now - this.stateStartTime) / duration, 1);
+      const progress = this.state === 'decelerating' 
+        ? Math.min((now - this.stateStartTime) / duration, 1)
+        : 1;
       
       // Use cubic ease out for smooth landing
       const t = this.easeOutCubic(progress);
-      
       const currentBaseQuat = this.startQuaternion.clone().slerp(this.endQuaternion, t);
       
-      // Add extra rotation that decays to zero
-      const totalExtraAngle = this.extraRotationRevs * Math.PI * 2;
-      const currentExtraAngle = totalExtraAngle * (1 - Math.pow(1 - progress, 3));
-      
-      const extraQuat = new THREE.Quaternion().setFromAxisAngle(
-        this.extraRotationAxis, 
-        currentExtraAngle
+      // Use controller's theta for extra rotation (background spin)
+      const extraQuat = new THREE.Quaternion().setFromEuler(
+        new THREE.Euler(this.rotationController.theta.x, this.rotationController.theta.y, 0)
       );
       
       this.group.quaternion.copy(extraQuat).multiply(currentBaseQuat);
       
-      if (progress >= 1) {
-        // Finished stopping at the current winner
-        this.group.quaternion.copy(this.endQuaternion);
-        
+      if (this.state === 'decelerating' && progress >= 1) {
         // Notify UI about current winner
         const currentWinnerName = this.winnersQueue[this.currentWinnerIndex];
         if (this.onWinnerHighlight) {
@@ -310,7 +347,9 @@ export class LotterySphere {
         this.state = 'highlighting';
         this.stateStartTime = now;
       }
-    } else if (this.state === 'highlighting') {
+    }
+
+    if (this.state === 'highlighting') {
         const pauseDuration = 800; // 0.8s pause
         if (now - this.stateStartTime > pauseDuration) {
             // Move to next winner or finish
@@ -352,10 +391,15 @@ export class LotterySphere {
     
     this.endQuaternion.setFromUnitVectors(localDir, targetDir);
     this.startQuaternion.copy(this.group.quaternion);
-    this.extraRotationAxis.set(0, 1, 0); 
-    // Reset revs for full deceleration
-    this.extraRotationRevs = config.extraRevs ?? 24;
-    this.decelerationDuration = config.durationMs ?? 12000;
+
+    // Setup extra rotation via controller
+    const settings = typeof window !== 'undefined' ? (window as any).appSettings : null;
+    const extraOmega = settings?.extraOmega ?? 0.0005; // rad/ms
+    const blendDuration = settings?.extraBlendDuration ?? 300; // ms
+
+    this.rotationController.setMode('extra', { x: extraOmega * 0.5, y: extraOmega }, blendDuration);
+
+    this.decelerationDuration = config.durationMs ?? 10000;
   }
 
   private prepareTransitionToNext(targetName: string) {
@@ -377,15 +421,10 @@ export class LotterySphere {
       this.endQuaternion.setFromUnitVectors(localDir, targetDir);
       this.startQuaternion.copy(this.group.quaternion);
       
-      // No extra spin for transitioning between winners
-      this.extraRotationRevs = 0;
+      // Keep extra rotation active but shorter duration for switch
       this.decelerationDuration = 1500;
       
       this.state = 'decelerating';
-      // Hack: we reuse 'decelerating' state logic, but duration is hardcoded to 1500 there.
-      // We might want shorter duration for switching between winners?
-      // For simplicity, let's keep 1500s or maybe we should variable-ize duration.
-      // Let's just keep it consistent for now.
       this.stateStartTime = performance.now();
   }
 

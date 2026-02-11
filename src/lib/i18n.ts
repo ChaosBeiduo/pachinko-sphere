@@ -39,6 +39,8 @@ export const translations = {
     spinTurns: "抽奖旋转圈数 (圈)",
     spinDuration: "抽奖持续时间 (秒)",
     extraRevs: "停止前额外旋转 (圈)",
+    extraOmega: "过渡平行角速度 (rad/s)",
+    extraBlendDuration: "过渡混合时长 (ms)",
     restoreDefault: "恢复默认",
     appMode: "抽奖模式",
     prizeMode: "奖项模式",
@@ -47,7 +49,11 @@ export const translations = {
     resetRound: "重置本轮",
     undoLast: "撤销上一个",
     drawCount: "已抽人数: {count}",
-    noFreeResults: "暂无抽奖结果"
+    noFreeResults: "暂无抽奖结果",
+    tip: "提示",
+    confirm: "确认",
+    cancel: "取消",
+    close: "关闭"
   },
   en: {
     systemConfig: "⚙️ Settings",
@@ -89,6 +95,8 @@ export const translations = {
     spinTurns: "Spin Turns",
     spinDuration: "Spin Duration (s)",
     extraRevs: "Extra Rounds (Alignment)",
+    extraOmega: "Extra Omega (rad/s)",
+    extraBlendDuration: "Extra Blend (ms)",
     restoreDefault: "Restore Defaults",
     appMode: "Draw Mode",
     prizeMode: "Prize Mode",
@@ -97,7 +105,11 @@ export const translations = {
     resetRound: "Reset Round",
     undoLast: "Undo Last",
     drawCount: "Drawn: {count}",
-    noFreeResults: "No results yet"
+    noFreeResults: "No results yet",
+    tip: "Tip",
+    confirm: "Confirm",
+    cancel: "Cancel",
+    close: "Close"
   }
 };
 

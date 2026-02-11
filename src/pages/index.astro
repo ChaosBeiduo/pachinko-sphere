@@ -1063,6 +1063,24 @@ import '../styles/global.scss'
                             <input type="number" id="extra-revs-input" class="settings-num-input" min="0" max="100" step="1">
                         </div>
                     </div>
+                    <div class="settings-row">
+                        <div class="settings-row-header">
+                            <label data-i18n="extraOmega">过渡平行角速度 (rad/s)</label>
+                        </div>
+                        <div class="settings-input-container">
+                            <input type="range" id="extra-omega-slider" class="settings-slider" min="0.1" max="5" step="0.1">
+                            <input type="number" id="extra-omega-input" class="settings-num-input" min="0.1" max="5" step="0.1">
+                        </div>
+                    </div>
+                    <div class="settings-row">
+                        <div class="settings-row-header">
+                            <label data-i18n="extraBlendDuration">过渡混合时长 (ms)</label>
+                        </div>
+                        <div class="settings-input-container">
+                            <input type="range" id="extra-blend-slider" class="settings-slider" min="0" max="2000" step="50">
+                            <input type="number" id="extra-blend-input" class="settings-num-input" min="0" max="2000" step="50">
+                        </div>
+                    </div>
                     <button id="restore-defaults-btn" class="dashed-btn" style="width: 100%; margin-top: 10px;" data-i18n="restoreDefault">恢复默认</button>
                         </div>
                     </div>
@@ -1133,6 +1151,10 @@ import '../styles/global.scss'
             const durationInput = document.getElementById('duration-input') as HTMLInputElement;
             const extraRevsSlider = document.getElementById('extra-revs-slider') as HTMLInputElement;
             const extraRevsInput = document.getElementById('extra-revs-input') as HTMLInputElement;
+            const extraOmegaSlider = document.getElementById('extra-omega-slider') as HTMLInputElement;
+            const extraOmegaInput = document.getElementById('extra-omega-input') as HTMLInputElement;
+            const extraBlendSlider = document.getElementById('extra-blend-slider') as HTMLInputElement;
+            const extraBlendInput = document.getElementById('extra-blend-input') as HTMLInputElement;
             const restoreDefaultsBtn = document.getElementById('restore-defaults-btn') as HTMLButtonElement;
 
             // Main UI Elements
@@ -1381,7 +1403,7 @@ import '../styles/global.scss'
                 const newNames = processInput();
                 if (newNames.length === 0) return;
                 
-                const confirmed = await modalManager.confirm(t('saveResetConfirm'));
+                const confirmed = await modalManager.confirm('', { messageKey: 'saveResetConfirm' });
                 if (confirmed) {
                     store.setState({
                         candidates: newNames,
@@ -1389,7 +1411,7 @@ import '../styles/global.scss'
                     });
                     syncWithStore();
                     updateStatus(t('listUpdated'));
-                    modalManager.toast(t('listSaved'));
+                    modalManager.toast('', { messageKey: 'listSaved' });
                 }
             });
 
@@ -1452,10 +1474,13 @@ import '../styles/global.scss'
                     
                     delBtn.addEventListener('click', async () => {
                         if (state.prizes.length <= 1) {
-                            modalManager.alert(t('atLeastOnePrize'));
+                            modalManager.alert('', { messageKey: 'atLeastOnePrize' });
                             return;
                         }
-                        const confirmed = await modalManager.confirm(t('deletePrizeConfirm', { prize: p.title }));
+                        const confirmed = await modalManager.confirm('', { 
+                            messageKey: 'deletePrizeConfirm',
+                            messageParams: { prize: p.title }
+                        });
                         if (!confirmed) return;
                         
                         const newPrizes = state.prizes.filter(x => x.id !== p.id);
@@ -1497,6 +1522,12 @@ import '../styles/global.scss'
                 
                 if (extraRevsSlider) extraRevsSlider.value = settings.extraRevs.toString();
                 if (extraRevsInput) extraRevsInput.value = settings.extraRevs.toString();
+
+                if (extraOmegaSlider) extraOmegaSlider.value = settings.extraOmega.toString();
+                if (extraOmegaInput) extraOmegaInput.value = settings.extraOmega.toString();
+
+                if (extraBlendSlider) extraBlendSlider.value = settings.extraBlendDuration.toString();
+                if (extraBlendInput) extraBlendInput.value = settings.extraBlendDuration.toString();
                 
                 // Update sphere if initialized
                 if (sphere) {
@@ -1525,6 +1556,8 @@ import '../styles/global.scss'
                 bindPair(turnsSlider, turnsInput, 'spinTurns');
                 bindPair(durationSlider, durationInput, 'spinDuration');
                 bindPair(extraRevsSlider, extraRevsInput, 'extraRevs');
+                bindPair(extraOmegaSlider, extraOmegaInput, 'extraOmega');
+                bindPair(extraBlendSlider, extraBlendInput, 'extraBlendDuration');
 
                 restoreDefaultsBtn?.addEventListener('click', () => {
                     settingsStore.resetToDefault();
@@ -1614,7 +1647,7 @@ import '../styles/global.scss'
                     // Confirmation if drawing or result shown
                     const isResultVisible = resultModalOverlay.classList.contains('visible');
                     if (state.isDrawing || isResultVisible) {
-                        const confirmed = await modalManager.confirm(t('modeSwitchConfirm'));
+                        const confirmed = await modalManager.confirm('', { messageKey: 'modeSwitchConfirm' });
                         if (!confirmed) return;
                         
                         if (isResultVisible) {
@@ -1634,23 +1667,23 @@ import '../styles/global.scss'
             });
 
             resetFreeBtn?.addEventListener('click', async () => {
-                const confirmed = await modalManager.confirm(t('confirmClear')); // Reuse clear confirm
+                const confirmed = await modalManager.confirm('', { messageKey: 'confirmClear' }); // Reuse clear confirm
                 if (confirmed) {
                     store.resetFree();
                     syncWithStore();
-                    modalManager.toast(t('resetComplete'));
+                    modalManager.toast('', { messageKey: 'resetComplete' });
                 }
             });
 
             clearResultsBtn?.addEventListener('click', async () => {
-                const confirmed = await modalManager.confirm(t('confirmClear'));
+                const confirmed = await modalManager.confirm('', { messageKey: 'confirmClear' });
                 if (confirmed) {
                     if (store.getState().mode === 'free') {
                         store.clearFreeResults();
-                        modalManager.toast(t('resetComplete'));
+                        modalManager.toast('', { messageKey: 'resetComplete' });
                     } else {
                         store.clearResults();
-                        modalManager.toast(t('resetComplete'));
+                        modalManager.toast('', { messageKey: 'resetComplete' });
                     }
                     syncWithStore();
                     updateStatus(t('ready'));
@@ -1669,6 +1702,11 @@ import '../styles/global.scss'
             // Init
             setupAnimationSettingsListeners();
             syncWithStore();
+
+            // Subscribe to store for automatic UI updates
+            store.subscribe(() => {
+                syncWithStore();
+            });
 		</script>
 	</body>
 </html>
