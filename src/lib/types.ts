@@ -30,6 +30,4 @@ export interface SphereSettings {
   spinTurns: number;     // 抽奖旋转圈数
   spinDuration: number;  // 抽奖持续时间 (s)
   extraRevs: number;     // 停止前的额外旋转圈数
-  extraOmega: number;    // 平行旋转角速度 (rad/s)
-  extraBlendDuration: number; // 旋转过渡混合时长 (ms)
 }

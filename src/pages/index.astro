@@ -917,7 +917,7 @@ import '../styles/global.scss'
                     
                     <div id="free-mode-controls" class="free-selector" style="display: none;">
                         <div class="free-info">
-                            <span id="free-draw-count-label" data-i18n="drawCount">已抽人数: 0</span>
+                            <span id="free-draw-count-label">已抽人数: 0</span>
                         </div>
                         <div class="free-actions">
                             <button id="undo-btn" class="dashed-btn sm" data-i18n="undoLast">撤销上一个</button>
@@ -1063,24 +1063,6 @@ import '../styles/global.scss'
                             <input type="number" id="extra-revs-input" class="settings-num-input" min="0" max="100" step="1">
                         </div>
                     </div>
-                    <div class="settings-row">
-                        <div class="settings-row-header">
-                            <label data-i18n="extraOmega">过渡平行角速度 (rad/s)</label>
-                        </div>
-                        <div class="settings-input-container">
-                            <input type="range" id="extra-omega-slider" class="settings-slider" min="0.1" max="5" step="0.1">
-                            <input type="number" id="extra-omega-input" class="settings-num-input" min="0.1" max="5" step="0.1">
-                        </div>
-                    </div>
-                    <div class="settings-row">
-                        <div class="settings-row-header">
-                            <label data-i18n="extraBlendDuration">过渡混合时长 (ms)</label>
-                        </div>
-                        <div class="settings-input-container">
-                            <input type="range" id="extra-blend-slider" class="settings-slider" min="0" max="2000" step="50">
-                            <input type="number" id="extra-blend-input" class="settings-num-input" min="0" max="2000" step="50">
-                        </div>
-                    </div>
                     <button id="restore-defaults-btn" class="dashed-btn" style="width: 100%; margin-top: 10px;" data-i18n="restoreDefault">恢复默认</button>
                         </div>
                     </div>
@@ -1151,10 +1133,6 @@ import '../styles/global.scss'
             const durationInput = document.getElementById('duration-input') as HTMLInputElement;
             const extraRevsSlider = document.getElementById('extra-revs-slider') as HTMLInputElement;
             const extraRevsInput = document.getElementById('extra-revs-input') as HTMLInputElement;
-            const extraOmegaSlider = document.getElementById('extra-omega-slider') as HTMLInputElement;
-            const extraOmegaInput = document.getElementById('extra-omega-input') as HTMLInputElement;
-            const extraBlendSlider = document.getElementById('extra-blend-slider') as HTMLInputElement;
-            const extraBlendInput = document.getElementById('extra-blend-input') as HTMLInputElement;
             const restoreDefaultsBtn = document.getElementById('restore-defaults-btn') as HTMLButtonElement;
 
             // Main UI Elements
@@ -1240,6 +1218,10 @@ import '../styles/global.scss'
                 if (!state.isDrawing && statusDisplay) {
                     updateStatus(t('ready'));
                 }
+
+                if (freeDrawCountLabel) {
+                    freeDrawCountLabel.textContent = t('drawCount', { count: state.freeResults.length });
+                }
             }
 
             // Sync UI with Store
@@ -1289,7 +1271,6 @@ import '../styles/global.scss'
                 langSelect.addEventListener('change', (e) => {
                     const newLang = (e.target as HTMLSelectElement).value as Language;
                     store.setLanguage(newLang);
-                    updateLanguage(newLang);
                 });
             }
 
@@ -1309,7 +1290,6 @@ import '../styles/global.scss'
                     const lang = (btn as HTMLElement).dataset.lang as Language;
                     if (lang) {
                         store.setLanguage(lang);
-                        updateLanguage(lang);
                         localStorage.setItem('visited', 'true');
                         if (welcomeModalOverlay) {
                             welcomeModalOverlay.classList.remove('visible');
@@ -1522,12 +1502,6 @@ import '../styles/global.scss'
                 
                 if (extraRevsSlider) extraRevsSlider.value = settings.extraRevs.toString();
                 if (extraRevsInput) extraRevsInput.value = settings.extraRevs.toString();
-
-                if (extraOmegaSlider) extraOmegaSlider.value = settings.extraOmega.toString();
-                if (extraOmegaInput) extraOmegaInput.value = settings.extraOmega.toString();
-
-                if (extraBlendSlider) extraBlendSlider.value = settings.extraBlendDuration.toString();
-                if (extraBlendInput) extraBlendInput.value = settings.extraBlendDuration.toString();
                 
                 // Update sphere if initialized
                 if (sphere) {
@@ -1556,8 +1530,6 @@ import '../styles/global.scss'
                 bindPair(turnsSlider, turnsInput, 'spinTurns');
                 bindPair(durationSlider, durationInput, 'spinDuration');
                 bindPair(extraRevsSlider, extraRevsInput, 'extraRevs');
-                bindPair(extraOmegaSlider, extraOmegaInput, 'extraOmega');
-                bindPair(extraBlendSlider, extraBlendInput, 'extraBlendDuration');
 
                 restoreDefaultsBtn?.addEventListener('click', () => {
                     settingsStore.resetToDefault();

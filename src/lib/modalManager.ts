@@ -203,14 +203,16 @@ class ModalManager {
   }
 
   async alert(message: string, options: Partial<ModalOptions> = {}): Promise<void> {
-    return this.show({ message, title: '提示', ...options, type: 'alert' });
+    const defaultTitle: Partial<ModalOptions> = options.title || options.titleKey ? {} : { titleKey: 'tip' };
+    return this.show({ message, ...defaultTitle, ...options, type: 'alert' });
   }
 
   async confirm(message: string, options: Partial<ModalOptions> = {}): Promise<boolean> {
     try {
+      const defaultTitle: Partial<ModalOptions> = options.title || options.titleKey ? {} : { titleKey: 'confirm' };
       await this.show({ 
         message, 
-        title: '确认', 
+        ...defaultTitle,
         ...options,
         type: 'confirm',
         allowOutsideClick: false,

@@ -106,20 +106,28 @@ export class LotteryManager {
 
     const { winners, remainingCandidates } = drawWinners(currentState.candidates, prize.count);
 
-    const DRAW_DELAY = settings.spinDuration * 1000 * 0.6;
+    const DRAW_DELAY = settings.spinDuration * 1000 * 0.8;
     
     setTimeout(() => {
       this.sphere?.stopAndHighlightWinners(
         winners,
         (name) => this.onWinnerHighlight?.(name),
         () => {
-          store.setDrawing(false);
-          store.addResults(prize.id, winners);
-          store.removeCandidates(winners);
-          this.onDrawComplete?.(prize.title, winners);
-          this.sphere?.setNames(store.getState().candidates);
+          setTimeout(() => {
+            store.setDrawing(false);
+            store.addResults(prize.id, winners);
+            store.removeCandidates(winners);
+            this.onDrawComplete?.(prize.title, winners);
+            this.sphere?.setNames(store.getState().candidates);
+          }, 300);
         },
-        { extraRevs: settings.extraRevs }
+        { 
+          extraRevs: settings.extraRevs,
+          durationMs: Math.max(2200, plan.decelerationDuration + 600),
+          nextExtraRevs: 1,
+          nextDurationMs: 1200,
+          finalPauseMs: 1200
+        }
       );
     }, DRAW_DELAY);
   }
@@ -154,19 +162,25 @@ export class LotteryManager {
       return;
     }
 
-    const DRAW_DELAY = settings.spinDuration * 1000 * 0.6;
+    const DRAW_DELAY = settings.spinDuration * 1000 * 0.8;
     
     setTimeout(() => {
       this.sphere?.stopAndHighlightWinners(
         winners,
         (name) => this.onWinnerHighlight?.(name),
         () => {
-          store.setDrawing(false);
-          store.addFreeResult(winners[0]);
-          this.onDrawComplete?.('', winners);
-          this.sphere?.setNames(store.getState().candidates);
+          setTimeout(() => {
+            store.setDrawing(false);
+            store.addFreeResult(winners[0]);
+            this.onDrawComplete?.('', winners);
+            this.sphere?.setNames(store.getState().candidates);
+          }, 300);
         },
-        { extraRevs: settings.extraRevs }
+        { 
+          extraRevs: settings.extraRevs,
+          durationMs: Math.max(2200, plan.decelerationDuration + 600),
+          finalPauseMs: 1200
+        }
       );
     }, DRAW_DELAY);
   }
