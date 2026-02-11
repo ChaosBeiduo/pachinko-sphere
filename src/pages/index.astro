@@ -1325,6 +1325,13 @@ import '../styles/global.scss'
             function closeSystemModal() {
                 systemModalOverlay.classList.remove('visible');
             }
+            function closeResultModal() {
+                resultModalOverlay.classList.remove('visible');
+                if (sphere) {
+                    const settings = settingsStore.getSettings();
+                    sphere.resumeIdleSpin(settings.rotationSpeed);
+                }
+            }
             closeModalBtn?.addEventListener('click', closeSystemModal);
             systemModalOverlay?.addEventListener('click', (e) => {
                 if (e.target === systemModalOverlay) closeSystemModal();
@@ -1332,7 +1339,7 @@ import '../styles/global.scss'
             document.addEventListener('keydown', (e) => {
                 if (e.key === 'Escape') {
                     closeSystemModal();
-                    resultModalOverlay.classList.remove('visible');
+                    closeResultModal();
                 }
             });
 
@@ -1569,11 +1576,13 @@ import '../styles/global.scss'
                 if (!winnersContainer) return;
                 winnersContainer.innerHTML = '';
                 const state = store.getState();
+                let hasResults = false;
                 
                 if (state.mode === 'prize') {
                     state.prizes.forEach(p => {
                         const winners = state.results[p.id] || [];
                         if (winners.length === 0) return;
+                        hasResults = true;
                         
                         const group = document.createElement('div');
                         group.className = 'winner-group';
@@ -1587,26 +1596,31 @@ import '../styles/global.scss'
                         winnersContainer.appendChild(group);
                     });
                 } else {
-                    if (state.freeResults.length === 0) {
-                        const empty = document.createElement('div');
-                        empty.className = 'empty-results';
-                        empty.textContent = t('noFreeResults');
-                        winnersContainer.appendChild(empty);
-                        return;
-                    }
+                    hasResults = state.freeResults.length > 0;
 
-                    const group = document.createElement('div');
-                    group.className = 'winner-group';
-                    group.innerHTML = `<h4 data-i18n="freeMode">${t('freeMode')}</h4>`;
-                    
-                    const list = document.createElement('div');
-                    group.appendChild(list);
-                    list.className = 'winner-group-list free-results-list';
-                    // List names in reverse chronological order
-                    list.textContent = state.freeResults.join('、');
-                    
-                    winnersContainer.appendChild(group);
+                    if (hasResults) {
+                        const group = document.createElement('div');
+                        group.className = 'winner-group';
+                        group.innerHTML = `<h4 data-i18n="freeMode">${t('freeMode')}</h4>`;
+                        
+                        const list = document.createElement('div');
+                        group.appendChild(list);
+                        list.className = 'winner-group-list free-results-list';
+                        // List names in reverse chronological order
+                        list.textContent = state.freeResults.join('、');
+                        
+                        winnersContainer.appendChild(group);
+                    }
                 }
+
+                if (!hasResults) {
+                    const empty = document.createElement('div');
+                    empty.className = 'empty-results';
+                    empty.textContent = t('noFreeResults');
+                    winnersContainer.appendChild(empty);
+                }
+
+                if (clearResultsBtn) clearResultsBtn.disabled = !hasResults;
             }
             
             // --- Mode Switch Logic ---
@@ -1623,7 +1637,7 @@ import '../styles/global.scss'
                         if (!confirmed) return;
                         
                         if (isResultVisible) {
-                            resultModalOverlay.classList.remove('visible');
+                            closeResultModal();
                         }
                     }
 
@@ -1667,7 +1681,7 @@ import '../styles/global.scss'
             });
 
             nextBtn?.addEventListener('click', () => {
-                resultModalOverlay.classList.remove('visible');
+                closeResultModal();
                 updateStatus(t('ready'));
             });
 

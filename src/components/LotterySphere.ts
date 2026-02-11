@@ -244,6 +244,15 @@ export class LotterySphere {
     }
   }
 
+  public resumeIdleSpin(speedRadS: number) {
+    if (this.state !== 'idle') return;
+    const currentEuler = new THREE.Euler().setFromQuaternion(this.group.quaternion, 'XYZ');
+    this.rotationController.theta.x = currentEuler.x;
+    this.rotationController.theta.y = currentEuler.y;
+    this.holdAtWinner = false;
+    this.setBaseSpeed(speedRadS);
+  }
+
   // New API: Start spinning
   public spin(plan?: SpinPlan) {
     if (this.names.length === 0) return;
