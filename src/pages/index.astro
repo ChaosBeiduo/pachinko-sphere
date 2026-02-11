@@ -772,34 +772,52 @@ import '../styles/global.scss'
             @media (max-width: 768px) {
                 /* Layout Adjustments */
                 #ui-layer {
-                    bottom: 30px;
-                    width: 90%;
+                    bottom: calc(16px + env(safe-area-inset-bottom));
+                    width: calc(100% - 24px);
                     gap: 15px;
                 }
                 
                 .control-panel {
                     width: 100%;
-                    padding: 15px 20px;
+                    padding: 14px 14px;
                     box-sizing: border-box;
                 }
 
                 #top-bar {
-                    top: 15px;
-                    right: 15px;
+                    top: calc(10px + env(safe-area-inset-top));
+                    left: 12px;
+                    right: 12px;
+                    gap: 8px;
+                    flex-wrap: wrap;
+                }
+
+                #mode-toggle-container {
+                    width: 100%;
+                    order: 2;
+                }
+                
+                .mode-btn {
+                    flex: 1;
+                    text-align: center;
+                    padding: 8px 10px;
                 }
 
                 #system-config-btn {
-                    padding: 8px 15px;
+                    order: 1;
+                    margin-left: auto;
+                    padding: 8px 12px;
                     font-size: 0.8rem;
                 }
 
                 /* Winners Panel Compact Mode */
                 #winners-panel {
-                    top: 60px;
-                    right: 15px;
-                    width: 140px;
+                    top: auto;
+                    right: 12px;
+                    left: 12px;
+                    bottom: calc(200px + env(safe-area-inset-bottom));
+                    width: auto;
                     padding: 10px;
-                    max-height: 30vh;
+                    max-height: 25vh;
                 }
                 
                 #winners-panel h3 {
@@ -815,11 +833,49 @@ import '../styles/global.scss'
                     font-size: 0.8rem;
                 }
 
+                #winners-container {
+                    margin-bottom: 10px;
+                }
+
+                .prize-selector {
+                    width: 100%;
+                    flex-direction: column;
+                    align-items: stretch;
+                    gap: 8px;
+                    margin-bottom: 6px;
+                }
+
+                #prize-select {
+                    width: 100%;
+                }
+
+                .prize-info {
+                    text-align: center;
+                }
+
+                .free-actions {
+                    flex-wrap: wrap;
+                    justify-content: center;
+                }
+
+                .stats-bar {
+                    flex-wrap: wrap;
+                    gap: 10px;
+                }
+                
+                .stats-bar > div {
+                    width: 100%;
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 8px;
+                    justify-content: flex-end;
+                }
+
                 /* Modals Mobile Style */
                 #result-modal, 
                 #welcome-modal {
-                    padding: 30px 20px;
-                    width: 85%;
+                    padding: 24px 16px;
+                    width: calc(100% - 24px);
                     max-height: 85vh;
                     overflow-y: auto;
                 }
@@ -828,24 +884,49 @@ import '../styles/global.scss'
                     font-size: 2.5rem;
                 }
 
+                #modal-winners-list {
+                    gap: 10px;
+                    margin: 20px 0;
+                }
+
+                .badge {
+                    font-size: 1rem;
+                    padding: 8px 14px;
+                }
+
                 .highlight-name {
-                    font-size: 2rem;
-                    height: 3rem;
+                    font-size: 1.5rem;
+                    height: 2.2rem;
+                    margin-bottom: 12px;
                 }
 
                 #system-modal {
-                    width: 95%;
-                    height: 80vh;
+                    width: calc(100% - 16px);
+                    height: 92dvh;
+                    max-height: 92dvh;
                 }
 
                 .modal-header {
-                    padding: 15px;
+                    padding: 12px;
                     flex-wrap: wrap;
                     gap: 10px;
                 }
 
                 .modal-tabs {
-                    gap: 10px;
+                    gap: 6px;
+                    width: 100%;
+                    overflow-x: auto;
+                    scrollbar-width: none;
+                }
+
+                .modal-tabs::-webkit-scrollbar {
+                    display: none;
+                }
+
+                .tab-btn {
+                    white-space: nowrap;
+                    font-size: 0.9rem;
+                    padding: 8px 6px;
                 }
                 
                 .lang-switcher {
@@ -859,13 +940,18 @@ import '../styles/global.scss'
 
                 /* Buttons & Inputs */
                 button, .primary-btn, .dashed-btn {
-                    padding: 10px 20px;
-                    font-size: 1rem;
+                    padding: 10px 14px;
+                    font-size: 0.9rem;
                 }
 
                 #start-btn {
                     width: 100%;
                     padding: 12px 0;
+                }
+
+                #status-display {
+                    font-size: 1.1rem;
+                    min-height: 1.5rem;
                 }
 
                 .language-options {
@@ -889,6 +975,33 @@ import '../styles/global.scss'
                 
                 .delete-prize-btn {
                     padding: 8px;
+                }
+            }
+
+            @media (max-width: 480px) {
+                #winners-panel {
+                    bottom: calc(210px + env(safe-area-inset-bottom));
+                    max-height: 22vh;
+                }
+
+                .control-panel {
+                    padding: 12px;
+                    gap: 10px;
+                }
+
+                #system-config-btn {
+                    font-size: 0.75rem;
+                    padding: 7px 10px;
+                }
+
+                .mode-btn {
+                    font-size: 0.8rem;
+                    padding: 7px 8px;
+                }
+
+                .dashed-btn.sm {
+                    font-size: 0.75rem;
+                    padding: 5px 8px;
                 }
             }
 		</style>

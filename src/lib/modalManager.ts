@@ -219,6 +219,34 @@ class ModalManager {
         @keyframes toast-out {
           to { transform: translateY(-20px); opacity: 0; }
         }
+        @media (max-width: 768px) {
+          .modal-content {
+            width: calc(100% - 20px);
+            max-width: none;
+            padding: 18px;
+            border-radius: 12px;
+          }
+          .modal-header h3 {
+            font-size: 1.05rem;
+            margin-bottom: 12px;
+          }
+          .modal-body {
+            margin-bottom: 16px;
+            font-size: 0.95rem;
+          }
+          .modal-input {
+            margin-top: 10px;
+            padding: 9px 10px;
+            font-size: 0.95rem;
+          }
+          .modal-footer {
+            gap: 8px;
+          }
+          .modal-btn {
+            padding: 9px 14px;
+            font-size: 0.9rem;
+          }
+        }
       `;
       document.head.appendChild(style);
     }
